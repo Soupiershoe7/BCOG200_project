@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zooma"
+version = "0.1.0"
+description = "A Zuma clone game"
+authors = [
+    { name = "Katarina Smith", email = "kms30@illinois.edu" }
+]
+license = { text = "MIT" }
+dependencies = []
+requires-python = ">=3.8"
+
+[project.scripts]
+zooma = "zooma.main:main"
