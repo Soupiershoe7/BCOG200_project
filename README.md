@@ -42,15 +42,15 @@ Score stuff and extras
 
 # Investigatory Projects
 
-Render a game window in 2D perspective. 1hr
+✅ Render a game window in 2D perspective. 1hr
 
-Render a sphere. 10m
+✅ Render a sphere. 10m
 
-Make sphere into an object with physics, have it move, maybe respond to keyboard input.  (Flush out the game loop, input process, decision making, render)
+✅ Make sphere into an object with physics, have it move, maybe respond to keyboard input.  (Flush out the game loop, input process, decision making, render)
 
-Have two spheres and when one collides with another, disappear the hit sphere.
+✅ Have two spheres and when one collides with another, disappear the hit sphere.
 
-What does pygame look like and what does it provide for us.
+✅ What does pygame look like and what does it provide for us.
 
 Next Set of work is how to make the game….
 

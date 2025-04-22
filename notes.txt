@@ -1,0 +1,111 @@
+Game objects
+
+ZoomaGame
+  holds everything?
+  run our game loop
+  score
+  lives
+  menus
+  pause state
+
+ScoreDisplay:
+  - visual entity that corresponds to ZoomaGame.score?
+
+ProgressBar
+
+In an active game we have some entities
+Shooter
+  - direction "self.angle"
+  - ball to be shot - HeldBall
+  - ball to be slotted in cannon - HeldBall
+    - Maybe this is just a color display entity?
+  - Can Fire Held ball, creating an ActiveBall and swapping in the new color as a new held ball
+  - can rotate (towards mouse)
+  - perhaps has a shot guide it projects
+
+Ball
+  - position
+  - color
+
+ActiveBall(Ball)
+  - deals with movement in direction
+  - deals with collision
+
+HeldBall(Ball)
+  - gets a holder (aka Shooter)
+  - just look pretty kitty
+  - can be fired "def fire()" - produce a ShotBall()
+    - Maybe this belongs to the shooter
+
+GhostBall(Ball)???
+  - maybe easier to not have this?
+
+ChainBall(Ball)
+  - need to communicate with the game.
+  - check collision against DeathHole
+  
+BallSequence 
+    - highest level of ordering all balls.
+    - holds balls and chains
+    - get last ball function?
+        - use to determine distance for emitter?
+        - Determine push sequence?
+    - get first ball
+        - use to determine collision with DeathHole
+    - can insert an ActiveBall? Causing movement?
+    - Can hold activeball with a position so it can animate insertion over several frames
+    - animates sequences forward of X to go backward at velocity Y where Y increases over time
+    
+
+Chain segment
+  (which holds balls)
+  balls that move together
+  - get contiguous balls match (thing/ActiveBall @ position)
+  - can be pulled backwards if ends match prior
+  - moves back
+  [E] [AAA] <-[BBB] <-[CCC]
+Board
+  has a path
+  it's closely related to a level whatever the fuck that is
+
+Path
+  This is a little complicated, we'll come back to this.
+  probably a sequence of positions with a directional bias
+  [1, 2, 3, 4, 5, 6, 7]
+  ball at 1.2 that implies it's direction points towards 2
+  MUST connect to emitter and DeathHole
+  Does it hold emitter and DeathHole?
+
+Emitter
+  - Poops da balls
+  - Produces balls on interval or based on room?
+  - Knows what to emit?
+  - Determines if we can emit?
+
+DeathHole
+  - update is probably nothing
+  - paint is look prettykitty
+
+
+What is an entity
+  Has position
+  Most will need to back reference the game.
+  can render draw()
+  manipulation functions set/get
+  update its state update()
+
+  class Ball(Entity):
+    def draw(self, screen):
+      pass
+    def update(self):
+      pass
+
+GameLoop:
+  Process Events
+  Process Input
+
+  update entities
+
+  draw
+
+  flip screen

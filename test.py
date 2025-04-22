@@ -70,7 +70,7 @@ class Shooter:
         pygame.draw.line(surface, (200, 200, 200), self.pos, (end_x, end_y), 6)
         # draw_rotated_rect_line(surface, (200, 200, 200), self.pos, (end_x, end_y), 6)
         # Draw loaded ball
-        pygame.draw.circle(surface, self.loaded_color, self.pos, BALL_RADIUS)
+        pygame.draw.circle(surface, self.loaded_color, self.pos, BALL_RADIUS*1.5)
 
     def shoot(self):
         direction = pygame.Vector2(math.cos(self.angle), math.sin(self.angle))
@@ -90,16 +90,37 @@ def main():
     static_balls = [random_ball() for _ in range(5)]  # Add 5 balls
 
     running = True
+    autoshoot = False
+    show_autoshoot = False
     while running:
         dt = clock.tick(FPS) / 1000
         screen.fill((20, 20, 20))
 
+        # Write the number of shot_balls on the top left corner
+        font = pygame.font.Font(None, 36)
+        text = font.render(f"Shot Balls: {len(shot_balls)}", True, (255, 255, 255))
+        screen.blit(text, (10, 10))
+        # Show autoshoot status
+        if show_autoshoot:
+            text = font.render(f"Autoshoot: {'ON' if autoshoot else 'OFF'}", True, (255, 255, 255))
+            screen.blit(text, (10, 40))
+
+        did_already_shoot = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
+                did_already_shoot = True
                 shot_balls.append(shooter.shoot())
                 shooter.loaded_color = random.choice(BALL_COLORS)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_f:
+                    autoshoot = not autoshoot
+                    show_autoshoot = True
+
+        if autoshoot and not did_already_shoot:
+            shot_balls.append(shooter.shoot())
+            shooter.loaded_color = random.choice(BALL_COLORS)
 
         mouse_pos = pygame.mouse.get_pos()
         shooter.update(mouse_pos)
