@@ -3,6 +3,9 @@ import sys
 from pygame import Color
 import random
 
+from zooma.entities.ball import Ball
+
+raise NotImplementedError("We factored this into main, do not use anymore")
 pygame.init()
 pygame.font.init() #initialize the font module
 font = pygame.font.Font(None, 36) #set the font for the text
@@ -14,28 +17,6 @@ pygame.display.set_caption("Simple Pygame Window") #set the title of the window
 
 clock = pygame.time.Clock() #create a clock object to control the frame rate
 
-class Ball:
-    def __init__(self, x, y, radius, color):
-        self.x = x
-        self.y = y
-        self.radius = radius
-        self.color = color
-        self.velocity = 0
-        self.shooting = False
-
-    def draw(self, screen):
-        pygame.draw.circle(screen, self.color, (self.x, self.y), self.radius)
-
-    def update(self):
-        if self.shooting:
-            self.y -= self.velocity # Move the ball up
-            if self.y < 0:
-                return False
-            return True
-        
-    def check_collision(self, other_ball):
-        distance = ((self.x - other_ball.x) ** 2 + (self.y - other_ball.y) ** 2) ** 0.5
-        return distance < self.radius + other_ball.radius
                 
 ball_list = [] # List to hold the balls
 target_list = [] # List to hold the target balls
@@ -62,14 +43,14 @@ while True:
             pygame.quit()
             sys.exit()
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            current_ball.shooting = True
+            current_ball.is_shot_ball = True
             current_ball.velocity = 10
             ball_list.append(current_ball)
             current_ball = Ball(0, 0, 20, Color('red'))
             shots += 1
 
     # Update the current ball's position to the mouse position
-    if not current_ball.shooting:
+    if not current_ball.is_shot_ball:
         mouse_x, mouse_y = pygame.mouse.get_pos()
         current_ball.x = mouse_x
         current_ball.y = mouse_y
