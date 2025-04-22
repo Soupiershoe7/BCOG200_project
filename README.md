@@ -1,7 +1,12 @@
 # BCOG200_project
 Repository for my BCOG 200 final project
 
-# Description
+# Project Check-In 4/21/25
+Most recently, I created ball_game.py which is a game that spawns target balls and you shoot at them by clicking the mouse which creates a ball at the location of the mouse, moving upwards. I did some work on collisions and scores, so I have a little bit of a better idea of how different parts of a pygame program work together. I used copilot to incrementally build ball_game.py and understand each step of the process.
+
+test.py is an exploratory program created by my dad who is tutoring me throughout the project.
+
+# Project Check-In 4/6/25
 I've switched my project to making a game inspired by PopCap's Zuma game. As of 4/6/25 this week I spent time looking at the details of the game and figuring out what the mechanics are. Then I discussed which mechanics are integral to the game, and which ones I can look at later on. 
 
 
