@@ -10,7 +10,9 @@ authors = [
     { name = "Katarina Smith", email = "kms30@illinois.edu" }
 ]
 license = { text = "MIT" }
-dependencies = []
+dependencies = [
+    "pygame>=2.6.1",
+]
 requires-python = ">=3.8"
 
 [project.scripts]
