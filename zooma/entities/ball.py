@@ -44,7 +44,7 @@ class HeldBall(Ball):
     def update(self):
         pass
 
-class MovableBall(Ball):
+class ShotBall(Ball):
     def __init__(self, position):
         super().__init__(position, Color('blue'))
 
@@ -56,3 +56,24 @@ class MovableBall(Ball):
         
     def update(self):
         self.position += self.heading * self.speed
+
+class ChainBall(Ball):
+    def __init__ (self, position):
+        super().__init__(position, Color('yellow'))
+
+        self.heading = Vector2(1, 0)
+        self.speed = 2
+
+    def update(self):
+        self.position += self.heading * self.speed
+
+    def set_target(self, target):
+        # target (10, 10)
+        # position (10, 0)
+        # target - position = (10, 10) - (10, 0) = (0, 10)
+
+        self.heading = Vector2(target) - self.position
+        # Heading is (0, 10)
+        if self.heading.length() != 0:
+            self.heading = self.heading.normalize()
+        # Heading is (0, 1)

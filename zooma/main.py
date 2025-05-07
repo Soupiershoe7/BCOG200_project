@@ -5,7 +5,7 @@ from pygame.locals import *
 
 from pygame import Vector2
 
-from zooma.entities.ball import Ball, TargetBall, MovableBall, HeldBall
+from zooma.entities.ball import Ball, ChainBall, TargetBall, ShotBall, HeldBall
 
 
 WIDTH, HEIGHT = 800, 600
@@ -16,13 +16,14 @@ class ZoomaGameState:
         self.shots = 0
         self.spawns = 0
 
-        self.ball_list = []
-        self.target_list = []
-
+        self.entity_list = []
+        
         self.held_ball = None
-        self.target_ball = None
+        self.chain_ball = None
+        self.last_spawn_time = 0
 
-
+# Spawn a target every 1 second.
+TARGET_SPAWN_INTERVAL = 1000
 
 class ZoomaGame:
     def __init__(self):
@@ -34,86 +35,120 @@ class ZoomaGame:
 
         self.font = pygame.font.Font(None, 36) #set the font for the text
 
-
     def run(self):
         """ Run the game loop """
 
-
-        #target spawn time
-        last_spawn_time = 0
-        target_spawn_time = 1000 # Spawn a target every 1 seconds
-
         state = ZoomaGameState()
         state.held_ball = HeldBall()
-        # TODO: remove ??
-        state.target_ball = TargetBall(Vector2(50, 50))
+
+        state.chain_ball = ChainBall((0, 0))
+        state.entity_list.append(state.chain_ball)
 
         while True:
-            #get the current time for ball spawn
-            current_time = pygame.time.get_ticks()
+            self.processInputs(state)
 
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    # TODO: make this shootBall??
+            self.doTasks(state)
 
-                    ball_just_shot = MovableBall(state.held_ball.position)
-
-                    state.ball_list.append(ball_just_shot)
-
-                    state.held_ball = HeldBall()
-                    state.shots += 1
-
-            # Current ball always follows the mouse
-            state.held_ball.set_position(pygame.mouse.get_pos())
-
-            #spawn target balls
-            if current_time - last_spawn_time > target_spawn_time:
-                rand_x = random.randint(20, WIDTH - 20)
-                rand_y = random.randint(20, HEIGHT // 2)
-                target_pos = Vector2(rand_x, rand_y)
-
-                new_target = TargetBall(target_pos)
-
-                state.target_list.append(new_target)
-                last_spawn_time = current_time
-                state.spawns += 1
-
-            # Update the balls in the list
-            [b.update() for b in state.ball_list]
-
-            # Check for out of bound balls and remove from ball_list
-            def is_in_bounds(ball):
-                return 0 < ball.position.x < WIDTH and 0 < ball.position.y < HEIGHT
-            state.ball_list = [b for b in state.ball_list if is_in_bounds(b)]
-            #state.ball_list = filter(state.ball_list, is_in_bounds)
-            
-            # TODO: check if ball is out of bounds
-
-            # Check for collisions
-            balls_to_remove = []
-            targets_to_remove = []
-
-            for ball in state.ball_list:
-                for target in state.target_list:
-                    if ball.check_collision(target):
-                        balls_to_remove.append(ball)
-                        targets_to_remove.append(target)
-                        state.hits += 1
-                        break
-
-            # Remove the balls and targets that collided
-            for ball in balls_to_remove:
-                state.ball_list.remove(ball)
-            for target in targets_to_remove:
-                state.target_list.remove(target)
+            self.updateEntities(state)
 
             self.updateDisplay(state)
 
-            # Cap the frame rate
-            self.clock.tick(60)
+            # Currently capped at 60fps
+            self.clock.tick(60) 
+
+    def processInputs(self, state: ZoomaGameState):
+        """ Process user inputs """
+        for event in pygame.event.get():
+            # print(f"Got event: {event}")
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                pressed_buttons = pygame.mouse.get_pressed()
+                if pressed_buttons[0]:
+                    self.shootBall(state)
+
+        # Current ball always follows the mouse
+        state.held_ball.set_position(pygame.mouse.get_pos())
+        state.chain_ball.set_target(pygame.mouse.get_pos())
+
+    def doTasks(self, state: ZoomaGameState):
+        current_time = pygame.time.get_ticks()
+        if current_time - state.last_spawn_time > TARGET_SPAWN_INTERVAL:
+            self.spawnTarget(state)
+
+    def updateEntities(self, state: ZoomaGameState):
+        # Update all the balls
+        for entity in state.entity_list:
+            entity.update()
+
+        # [b.update() for b in state.ball_list]
+        # state.chain_ball.update()
+
+
+        # Cleanup out of bound balls
+        self.checkOutOfBounds(state)
+
+        # Check for collisions
+        self.checkCollisions(state)
+
+
+
+
+    def spawnTarget(self, state: ZoomaGameState):
+        rand_x = random.randint(20, WIDTH - 20)
+        rand_y = random.randint(20, HEIGHT // 2)
+
+        target_pos = Vector2(rand_x, rand_y)
+
+        new_target = TargetBall(target_pos)
+
+        state.entity_list.append(new_target)
+        state.last_spawn_time = pygame.time.get_ticks()
+        state.spawns += 1
+
+    def shootBall(self, state: ZoomaGameState):
+        """ Shoot the held ball """
+        ball_just_shot = ShotBall(state.held_ball.position)
+
+        state.entity_list.append(ball_just_shot)
+
+        state.held_ball = HeldBall()
+        
+        state.shots += 1
+
+    def checkOutOfBounds(self, state: ZoomaGameState):
+        """ Check for out of bound balls and remove from ball_list """
+        def is_in_bounds(ball):
+            return 0 < ball.position.x < WIDTH and 0 < ball.position.y < HEIGHT
+        
+        # Remove Movable balls that are out of bounds
+        for entity in state.entity_list:
+            if isinstance(entity, ShotBall):
+                if not is_in_bounds(entity):
+                    state.entity_list.remove(entity)
+        # state.ball_list = [b for b in state.ball_list if is_in_bounds(b)]
+
+    def checkCollisions(self, state: ZoomaGameState):
+        """ Check for collisions between balls and targets """
+        to_remove = set()
+
+        for entity in state.entity_list:
+            can_collide = isinstance(entity, ShotBall) or isinstance(entity, ChainBall)
+            if can_collide:
+                # Check for collisions with other balls
+                for other in state.entity_list:
+                    if entity != other and isinstance(other, TargetBall):
+                        if entity.check_collision(other):
+                            to_remove.add(other)
+                            if isinstance(entity, ShotBall):
+                                to_remove.add(entity)
+                            state.hits += 1
+
+        
+        for remove in to_remove:
+            if remove in state.entity_list:
+                state.entity_list.remove(remove)
 
     def updateDisplay(self, state: ZoomaGameState):
         """ all the draws of python objects should occur here"""
@@ -129,15 +164,25 @@ class ZoomaGame:
 
     def drawBalls(self, state: ZoomaGameState):
         # Draw all the balls
-        for ball in state.ball_list:
-            ball.draw(self.screen)
+        for entity in state.entity_list:
+            entity.draw(self.screen)
 
-        # Draw the current ball
-        state.held_ball.draw(self.screen) 
+        # Held ball is still a special baby.
+        state.held_ball.draw(self.screen)
 
-        # Draw the target balls
-        for target in state.target_list:
-            target.draw(self.screen)
+
+        # for ball in state.ball_list:
+        #     ball.draw(self.screen)
+
+        # # Draw the current ball
+        # state.held_ball.draw(self.screen) 
+
+        # # Draw the chain ball
+        # state.chain_ball.draw(self.screen)
+
+        # # Draw the target balls
+        # for target in state.target_list:
+        #     target.draw(self.screen)
 
     def drawStatusDisplay(self, state: ZoomaGameState):
         # Draw the score
