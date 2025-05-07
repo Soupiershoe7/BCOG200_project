@@ -41,7 +41,8 @@ class ZoomaGame:
         state = ZoomaGameState()
         state.held_ball = HeldBall()
 
-        state.chain_ball = ChainBall((0, 0))
+        # state.chain_ball = ChainBall(self._getRandomPosition())
+        state.chain_ball = ChainBall(Vector2(WIDTH // 2, HEIGHT // 2))
         state.entity_list.append(state.chain_ball)
 
         while True:
@@ -67,6 +68,8 @@ class ZoomaGame:
                 pressed_buttons = pygame.mouse.get_pressed()
                 if pressed_buttons[0]:
                     self.shootBall(state)
+                elif pressed_buttons[2]:
+                    self.appendChainBall(state)
 
         # Current ball always follows the mouse
         state.held_ball.set_position(pygame.mouse.get_pos())
@@ -94,12 +97,18 @@ class ZoomaGame:
 
 
 
+    def _getRandomPosition(self, top_half_only: bool = False):
+        """ Get a random position on the screen """
+        rand_x = random.randint(20, WIDTH - 20)
+        if top_half_only:
+            rand_y = random.randint(20, HEIGHT // 2)
+        else:
+            rand_y = random.randint(20, HEIGHT - 20)
+
+        return Vector2(rand_x, rand_y)
 
     def spawnTarget(self, state: ZoomaGameState):
-        rand_x = random.randint(20, WIDTH - 20)
-        rand_y = random.randint(20, HEIGHT // 2)
-
-        target_pos = Vector2(rand_x, rand_y)
+        target_pos = self._getRandomPosition(True)
 
         new_target = TargetBall(target_pos)
 
@@ -117,6 +126,18 @@ class ZoomaGame:
         
         state.shots += 1
 
+    def appendChainBall(self, state: ZoomaGameState):
+        new_chain_ball = ChainBall(self._getRandomPosition())
+        state.entity_list.append(new_chain_ball)
+
+        # Append the new chain ball to the chain
+        append_at = state.chain_ball
+        while append_at.behind is not None:
+            append_at = append_at.behind
+
+        append_at.append(new_chain_ball)
+
+
     def checkOutOfBounds(self, state: ZoomaGameState):
         """ Check for out of bound balls and remove from ball_list """
         def is_in_bounds(ball):
@@ -127,7 +148,6 @@ class ZoomaGame:
             if isinstance(entity, ShotBall):
                 if not is_in_bounds(entity):
                     state.entity_list.remove(entity)
-        # state.ball_list = [b for b in state.ball_list if is_in_bounds(b)]
 
     def checkCollisions(self, state: ZoomaGameState):
         """ Check for collisions between balls and targets """

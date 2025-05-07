@@ -61,19 +61,48 @@ class ChainBall(Ball):
     def __init__ (self, position):
         super().__init__(position, Color('yellow'))
 
-        self.heading = Vector2(1, 0)
+        # self.heading = Vector2(1, 0)
         self.speed = 2
+        self.behind: ChainBall = None
+        self.infront: ChainBall = None
+
+    def append(self, ball: "ChainBall"):
+        assert ball is not None, "The fuck you doing man? no ballz"
+
+        self.behind = ball
+        ball.infront = self
+        ball.set_target(self.position)
 
     def update(self):
-        self.position += self.heading * self.speed
+        if self.infront:
+            goal_offset = self.infront.position - self.position
+            collision_range = self.radius + self.infront.radius
+        else:
+            # goal_offset = self.target - self.position
+            goal_offset = self.target - self.position
+            # goal_offset = (self.heading * self.speed)
+            collision_range = self.radius * 2
+
+        # how far away is goal
+        distance = goal_offset.length()
+
+        # where is goal
+        heading = goal_offset
+        if heading.length() != 0:
+            heading = heading.normalize()
+        
+        # how close can we go
+        max_distance = distance - collision_range
+
+        #move
+        self.position += heading * min(self.speed, max_distance)
+
 
     def set_target(self, target):
-        # target (10, 10)
-        # position (10, 0)
-        # target - position = (10, 10) - (10, 0) = (0, 10)
+        if isinstance(target, ChainBall):
+            target = target.position
 
-        self.heading = Vector2(target) - self.position
-        # Heading is (0, 10)
-        if self.heading.length() != 0:
-            self.heading = self.heading.normalize()
-        # Heading is (0, 1)
+        self.target = target
+
+if __name__ == "__main__":
+    print("Don't be an idiot and run the ball")
