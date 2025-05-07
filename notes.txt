@@ -109,3 +109,29 @@ GameLoop:
   draw
 
   flip screen
+
+  todo list
+  TimedEvent ObjectTask
+  do balls need to be pushed
+  chain balls exist as a chain group
+    - chain group provides
+      - front / back
+      - directional motivation logic where to go and why
+
+  might need proper collision across all entities
+    - This might effect order of update
+
+  split chains
+
+  Missing:
+    - Shooter / Turret
+    - Path
+    - Goal
+    - Emitter
+
+  Scoring
+    chains
+    Spawnables - coins power ups
+    Gap detection... 
+
+
