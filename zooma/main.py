@@ -6,6 +6,7 @@ from pygame.locals import *
 from pygame import Vector2
 
 from zooma.entities.ball import Ball, ChainBall, TargetBall, ShotBall, HeldBall
+from zooma.entities.path import Path
 
 
 WIDTH, HEIGHT = 800, 600
@@ -21,6 +22,9 @@ class ZoomaGameState:
         self.held_ball = None
         self.chain_ball = None
         self.last_spawn_time = 0
+
+        self.draw_mode = False
+        self.path: Path = None
 
 # Spawn a target every 1 second.
 TARGET_SPAWN_INTERVAL = 1000
@@ -40,10 +44,13 @@ class ZoomaGame:
 
         state = ZoomaGameState()
         state.held_ball = HeldBall()
+        state.path = Path([])
+        state.entity_list.append(state.path)
 
         # state.chain_ball = ChainBall(self._getRandomPosition())
         state.chain_ball = ChainBall(Vector2(WIDTH // 2, HEIGHT // 2))
         state.entity_list.append(state.chain_ball)
+    
 
         while True:
             self.processInputs(state)
@@ -70,6 +77,10 @@ class ZoomaGame:
                     self.shootBall(state)
                 elif pressed_buttons[2]:
                     self.appendChainBall(state)
+            elif event.type == pygame.KEYDOWN:
+                if event.key == K_p:
+                    self.toggle_draw_mode(state)
+
 
         # Current ball always follows the mouse
         state.held_ball.set_position(pygame.mouse.get_pos())
@@ -79,23 +90,20 @@ class ZoomaGame:
         current_time = pygame.time.get_ticks()
         if current_time - state.last_spawn_time > TARGET_SPAWN_INTERVAL:
             self.spawnTarget(state)
+        if state.draw_mode:
+            state.path.addPoint(pygame.mouse.get_pos())
+
 
     def updateEntities(self, state: ZoomaGameState):
         # Update all the balls
         for entity in state.entity_list:
             entity.update()
 
-        # [b.update() for b in state.ball_list]
-        # state.chain_ball.update()
-
-
         # Cleanup out of bound balls
         self.checkOutOfBounds(state)
 
         # Check for collisions
         self.checkCollisions(state)
-
-
 
     def _getRandomPosition(self, top_half_only: bool = False):
         """ Get a random position on the screen """
@@ -106,6 +114,14 @@ class ZoomaGame:
             rand_y = random.randint(20, HEIGHT - 20)
 
         return Vector2(rand_x, rand_y)
+
+    def toggle_draw_mode(self, state: ZoomaGameState):
+        if state.draw_mode:
+            state.draw_mode = False
+        else:
+            state.draw_mode = True
+            state.path.clear()
+
 
     def spawnTarget(self, state: ZoomaGameState):
         target_pos = self._getRandomPosition(True)
@@ -190,19 +206,6 @@ class ZoomaGame:
         # Held ball is still a special baby.
         state.held_ball.draw(self.screen)
 
-
-        # for ball in state.ball_list:
-        #     ball.draw(self.screen)
-
-        # # Draw the current ball
-        # state.held_ball.draw(self.screen) 
-
-        # # Draw the chain ball
-        # state.chain_ball.draw(self.screen)
-
-        # # Draw the target balls
-        # for target in state.target_list:
-        #     target.draw(self.screen)
 
     def drawStatusDisplay(self, state: ZoomaGameState):
         # Draw the score

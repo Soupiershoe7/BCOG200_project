@@ -110,7 +110,7 @@ GameLoop:
 
   flip screen
 
-  todo list
+TODO LIST  
   TimedEvent ObjectTask
   do balls need to be pushed
   chain balls exist as a chain group

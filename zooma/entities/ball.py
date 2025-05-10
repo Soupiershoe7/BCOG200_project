@@ -3,9 +3,10 @@ import math
 import pygame
 
 from pygame import Color, Vector2
+from zooma.entities.entity import Entity
 
 
-class Ball(ABC):
+class Ball(Entity):
     def __init__(self, position: Vector2, color):
         self.position = position
 
@@ -17,10 +18,6 @@ class Ball(ABC):
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, self.position, self.radius)
 
-    @abstractmethod
-    def update(self):
-        pass
-        
     def check_collision(self, other_ball):
         distance = self.position.distance_to(other_ball.position)
         return distance < (self.radius + other_ball.radius)
