@@ -1,6 +1,36 @@
 # BCOG200_project
 Repository for my BCOG 200 final project
 
+# Installation
+
+1. Create and activate a Python virtual environment (recommended):
+   ```sh
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+
+2. Install the project in editable mode:
+   ```sh
+   pip install -e .
+   ```
+
+3. Run the program:
+   ```sh
+   python -m zooma
+   ```
+
+# Instructions
+
+Work in progress.  Draw a path for the zooma balls to follow.  Still to be done, shooting balls into chain, splitting chain, scoring, etc..
+
+## Controls
+
+- **p**: Toggle draw mode to draw a path with your mouse.
+- **a**: Append a new ball to the chain at the mouse position.
+- **space**: Pause or resume the game.
+- **esc**: Quit/close the game.
+
+
 # Project Check-In 4/21/25
 Most recently, I created ball_game.py which is a game that spawns target balls and you shoot at them by clicking the mouse which creates a ball at the location of the mouse, moving upwards. I did some work on collisions and scores, so I have a little bit of a better idea of how different parts of a pygame program work together. I used copilot to incrementally build ball_game.py and understand each step of the process.
 

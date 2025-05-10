@@ -63,6 +63,10 @@ class ChainBall(Ball):
         self.behind: ChainBall = None
         self.infront: ChainBall = None
 
+    def with_color(self, color):
+        self.color = color
+        return self
+
     def append(self, ball: "ChainBall"):
         assert ball is not None, "The fuck you doing man? no ballz"
 

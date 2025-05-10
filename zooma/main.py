@@ -11,6 +11,7 @@ from zooma.entities.chain import Chain
 
 WIDTH, HEIGHT = 800, 600
 
+
 class ZoomaGameState:
     def __init__(self):
         self.hits = 0
@@ -24,6 +25,7 @@ class ZoomaGameState:
         self.chain: Chain = None
         self.last_spawn_time = 0
 
+        self.paused = False
         self.draw_mode = False
         self.path: Path = None
 
@@ -67,7 +69,7 @@ class ZoomaGame:
             self.updateDisplay(state)
 
             # Currently capped at 60fps
-            self.clock.tick(60) 
+            self.clock.tick(120) 
 
     def processInputs(self, state: ZoomaGameState):
         """ Process user inputs """
@@ -87,6 +89,11 @@ class ZoomaGame:
                     self.toggle_draw_mode(state)
                 elif event.key == K_a:
                     self.appendChainBall(state)
+                elif event.key == K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()  
+                elif event.key == K_SPACE:
+                    state.paused = not state.paused
 
 
         # Current ball always follows the mouse
@@ -103,6 +110,8 @@ class ZoomaGame:
 
 
     def updateEntities(self, state: ZoomaGameState):
+        if state.paused:
+            return
         # Update all the balls
         for entity in state.entity_list:
             entity.update()
@@ -210,15 +219,21 @@ class ZoomaGame:
         # Held ball is still a special baby.
         state.held_ball.draw(self.screen)
 
-
+    def draw_text(self, screen: pygame.Surface, text: str, pos: tuple[int, int]):
+        text_surface = self.font.render(text, True, Color('white'))
+        screen.blit(text_surface, pos)
+    
     def drawStatusDisplay(self, state: ZoomaGameState):
         # Draw the score
         if state.shots == 0:
             accuracy = 0
         else:
             accuracy = state.hits / state.shots
-        score_text = self.font.render(f"Hits: {state.hits} Shots: {state.shots} Spawns: {state.spawns} Accuracy: {accuracy:.2f}", True, Color('white'))
-        self.screen.blit(score_text, (10, 10)) # Draw the score at the top left corner
+        self.draw_text(self.screen, f"Hits: {state.hits} Shots: {state.shots} Spawns: {state.spawns} Accuracy: {accuracy:.2f}", (10, 10))
+        self.draw_text(self.screen, "Press p to pause", (10, 40))
+        self.draw_text(self.screen, "Press a to append a ball", (10, 70))
+        self.draw_text(self.screen, "Press ESC to quit", (10, 100))
+        self.draw_text(self.screen, "Press d to toggle draw mode", (10, 130))
 
 
 def main():
