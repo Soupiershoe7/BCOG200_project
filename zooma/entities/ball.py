@@ -8,7 +8,7 @@ from zooma.entities.entity import Entity
 
 class Ball(Entity):
     def __init__(self, position: Vector2, color):
-        self.position = position
+        self.position = Vector2(position)
 
         self.radius = 20
         self.color = color

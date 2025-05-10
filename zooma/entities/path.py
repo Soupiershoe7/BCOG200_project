@@ -11,7 +11,11 @@ class Path(Entity):
             self.addPoint(point)
 
     def addPoint(self, point):
-        self.points.append(Vector2(point))
+        new_point = Vector2(point)
+        is_empty = len(self.points) == 0
+
+        if is_empty or (self.points[-1].distance_to(new_point) > 5):
+            self.points.append(new_point)
 
     def clear(self):
         self.points = []

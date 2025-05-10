@@ -7,7 +7,7 @@ from pygame import Vector2
 
 from zooma.entities.ball import Ball, ChainBall, TargetBall, ShotBall, HeldBall
 from zooma.entities.path import Path
-
+from zooma.entities.chain import Chain
 
 WIDTH, HEIGHT = 800, 600
 
@@ -19,8 +19,9 @@ class ZoomaGameState:
 
         self.entity_list = []
         
-        self.held_ball = None
-        self.chain_ball = None
+        self.held_ball: HeldBall = None
+        self.chain_ball: ChainBall = None
+        self.chain: Chain = None
         self.last_spawn_time = 0
 
         self.draw_mode = False
@@ -47,9 +48,13 @@ class ZoomaGame:
         state.path = Path([])
         state.entity_list.append(state.path)
 
+        ball = ChainBall(Vector2(WIDTH // 2, HEIGHT // 2))
+        state.chain = Chain(state.path, [ball])
+        state.entity_list.append(state.chain)
+
         # state.chain_ball = ChainBall(self._getRandomPosition())
-        state.chain_ball = ChainBall(Vector2(WIDTH // 2, HEIGHT // 2))
-        state.entity_list.append(state.chain_ball)
+        # state.chain_ball = ChainBall(Vector2(WIDTH // 2, HEIGHT // 2))
+        # state.entity_list.append(state.chain_ball)
     
 
         while True:
@@ -80,16 +85,19 @@ class ZoomaGame:
             elif event.type == pygame.KEYDOWN:
                 if event.key == K_p:
                     self.toggle_draw_mode(state)
+                elif event.key == K_a:
+                    self.appendChainBall(state)
 
 
         # Current ball always follows the mouse
         state.held_ball.set_position(pygame.mouse.get_pos())
-        state.chain_ball.set_target(pygame.mouse.get_pos())
+        # state.chain_ball.set_target(pygame.mouse.get_pos())
 
     def doTasks(self, state: ZoomaGameState):
         current_time = pygame.time.get_ticks()
         if current_time - state.last_spawn_time > TARGET_SPAWN_INTERVAL:
-            self.spawnTarget(state)
+            # self.spawnTarget(state)
+            pass
         if state.draw_mode:
             state.path.addPoint(pygame.mouse.get_pos())
 
@@ -143,15 +151,11 @@ class ZoomaGame:
         state.shots += 1
 
     def appendChainBall(self, state: ZoomaGameState):
-        new_chain_ball = ChainBall(self._getRandomPosition())
-        state.entity_list.append(new_chain_ball)
+        position = pygame.mouse.get_pos()
+        new_chain_ball = ChainBall(Vector2(position))
 
         # Append the new chain ball to the chain
-        append_at = state.chain_ball
-        while append_at.behind is not None:
-            append_at = append_at.behind
-
-        append_at.append(new_chain_ball)
+        state.chain.append_ball(new_chain_ball)
 
 
     def checkOutOfBounds(self, state: ZoomaGameState):
