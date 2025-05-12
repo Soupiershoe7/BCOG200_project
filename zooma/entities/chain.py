@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 from pygame.math import Vector2
 
-from zooma.entities.ball import ChainBall
 from zooma.entities.entity import Entity
+from zooma.entities.ball import ChainBall, Ball
+from zooma.entities.path import Path
+
 from zooma.utils.vector import to_heading
 from zooma.utils.colors import rainbow
 from zooma.utils.distance import get_distance_between
@@ -15,7 +17,8 @@ class BallRecord:
 @dataclass
 class InsertionRecord:
     index: int
-    target_id: int
+    target_id:dataclass
+
 
 class Chain(Entity):
     def __init__(self, path: Path, balls: list[ChainBall]):
@@ -28,11 +31,11 @@ class Chain(Entity):
             id = len(self.data)
             self.data.append(BallRecord(ball.with_id(id).with_color(next(self.color_gen)), 0))
 
-    def check_collision(self, ball: Ball) -> Ball:
-        for i, chain_ball in enumerate(self.balls):
-            distance = get_distance_between(ball, chain_ball)
-            if distance <= ball.radius + chain_ball.radius:
-                return (i, chain_ball)
+    def check_collision(self, ball: Ball) -> tuple[int, ChainBall] | None:
+        for i, record in enumerate(self.data):
+            distance = get_distance_between(ball, record.ball)
+            if distance <= ball.radius + record.ball.radius:
+                return (i, record.ball)
         return None
 
     def get_insertion_point(self, ball: Ball) -> InsertionRecord | None:
@@ -40,10 +43,12 @@ class Chain(Entity):
         #return the index of the nearest segment
 
         #check if the ball is colliding with the chain
-        collision_index, collision_ball = self.checkCollision(ball)
-        if collision_index is None:
-            #IS THIS RIGHT?
-            return None 
+        collision_event = self.check_collision(ball)
+
+        if not collision_event:
+            return None
+
+        collision_index, collision_ball = collision_event
 
         closest_distance = float('inf')
         path_segment_vector = None
@@ -63,6 +68,10 @@ class Chain(Entity):
                 closest_distance = distance
                 path_segment_vector = ab
 
+        # Shouldn't happen
+        if path_segment_vector is None:
+            return InsertionRecord(collision_index, 0)
+        
         impact_vector = (collision_ball.position - ball.position)
         alignment = impact_vector.dot(path_segment_vector)
 
@@ -74,6 +83,8 @@ class Chain(Entity):
         return InsertionRecord(insertion_index, target_id)
 
     def _compute_target_id(self, index: int) -> int:
+        if index >= len(self.data):
+            index = len(self.data) - 1
         record = self.data[index]
         return record.target_id
 

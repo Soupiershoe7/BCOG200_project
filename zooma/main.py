@@ -21,7 +21,6 @@ class ZoomaGameState:
         self.entity_list = []
         
         self.held_ball: HeldBall = None
-        self.chain_ball: ChainBall = None
         self.chain: Chain = None
         self.last_spawn_time = 0
 
@@ -183,17 +182,19 @@ class ZoomaGame:
         to_remove = set()
 
         for entity in state.entity_list:
-            can_collide = isinstance(entity, ShotBall) or isinstance(entity, ChainBall)
+            can_collide = isinstance(entity, ShotBall)
             if can_collide:
                 # Check for collisions with other balls
                 for other in state.entity_list:
-                    if entity != other and isinstance(other, TargetBall):
-                        if entity.check_collision(other):
-                            to_remove.add(other)
-                            if isinstance(entity, ShotBall):
-                                to_remove.add(entity)
-                            state.hits += 1
-
+                    if entity != other and isinstance(other, Chain):
+                        #TODO check if collision ball color matches entity
+                        collision_event = other.check_collision(entity)
+                        if not collision_event:
+                            continue
+                        _, collision_ball = collision_event
+                        insertion_record = other.get_insertion_point(entity)
+                        print(insertion_record)
+                        to_remove.add(entity)
         
         for remove in to_remove:
             if remove in state.entity_list:
