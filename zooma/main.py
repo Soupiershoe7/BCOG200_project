@@ -187,13 +187,15 @@ class ZoomaGame:
                 # Check for collisions with other balls
                 for other in state.entity_list:
                     if entity != other and isinstance(other, Chain):
+                        assert isinstance(other, Chain), "collision target is not a Chain"
                         #TODO check if collision ball color matches entity
                         collision_event = other.check_collision(entity)
                         if not collision_event:
                             continue
                         _, collision_ball = collision_event
                         insertion_record = other.get_insertion_point(entity)
-                        print(insertion_record)
+                        new_ball = ChainBall(entity.position)
+                        other.insert_ball(new_ball, insertion_record)
                         to_remove.add(entity)
         
         for remove in to_remove:

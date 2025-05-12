@@ -88,6 +88,12 @@ class Chain(Entity):
         record = self.data[index]
         return record.target_id
 
+    def insert_ball(self, ball: ChainBall, insertion_record: InsertionRecord):
+        id = len(self.data)
+        ball = ball.with_id(id).with_color(next(self.color_gen))
+        new_record = BallRecord(ball, insertion_record.target_id)
+        self.data.insert(insertion_record.index, new_record)
+
     def append_ball(self, ball: ChainBall):
         is_empty = len(self.data) == 0
         if not is_empty:
@@ -100,7 +106,8 @@ class Chain(Entity):
             new_target_id = 0
         
         id = len(self.data)
-        self.data.append(BallRecord(ball.with_id(id).with_color(next(self.color_gen)), new_target_id))
+        ball = ball.with_id(id).with_color(next(self.color_gen))
+        self.data.append(BallRecord(ball, new_target_id))
 
         
     def draw(self, screen):
