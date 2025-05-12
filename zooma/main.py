@@ -49,14 +49,7 @@ class ZoomaGame:
         state.path = Path([])
         state.entity_list.append(state.path)
 
-        ball = ChainBall(Vector2(WIDTH // 2, HEIGHT // 2))
-        state.chain = Chain(state.path, [ball])
-        state.entity_list.append(state.chain)
-
-        # state.chain_ball = ChainBall(self._getRandomPosition())
-        # state.chain_ball = ChainBall(Vector2(WIDTH // 2, HEIGHT // 2))
-        # state.entity_list.append(state.chain_ball)
-    
+        self._reset_chain(state)
 
         while True:
             self.processInputs(state)
@@ -93,6 +86,8 @@ class ZoomaGame:
                     sys.exit()  
                 elif event.key == K_SPACE:
                     state.paused = not state.paused
+                elif event.key == K_r:
+                    self._reset_chain(state)
 
 
         # Current ball always follows the mouse
@@ -107,6 +102,14 @@ class ZoomaGame:
         if state.draw_mode:
             state.path.addPoint(pygame.mouse.get_pos())
 
+    def _reset_chain(self, state: ZoomaGameState):
+        old_chain = state.chain
+        if old_chain:
+            state.entity_list.remove(old_chain)
+        
+        ball = ChainBall(Vector2(WIDTH // 2, HEIGHT // 2))
+        state.chain = Chain(state.path, [ball])
+        state.entity_list.append(state.chain)
 
     def updateEntities(self, state: ZoomaGameState):
         if state.paused:
