@@ -179,11 +179,16 @@ class Chain(Entity):
         updated_distance = updated_vector_to_target.length()
         if updated_distance < 0.001:
             # Advance to the next target
-            record.target_id += 1
-            if record.target_id >= len(self.path.points):
-                record.target_id = 0
+            self._advanceTarget(index)
             
         remaining_movement = move_speed - movement_amount
         if remaining_movement > 0.001 and not collided and movement_amount > 0.001:
             # Try Again
             self._updateBall(index, remaining_movement)
+
+    def _advanceTarget(self, index: int):
+        record = self.data[index]
+
+        record.target_id += 1
+        if record.target_id >= len(self.path.points):
+            record.target_id = 0
