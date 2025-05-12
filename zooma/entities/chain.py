@@ -1,34 +1,81 @@
 from dataclasses import dataclass
+from pygame.math import Vector2
+
 from zooma.entities.ball import ChainBall
-from zooma.entities.path import Path
 from zooma.entities.entity import Entity
 from zooma.utils.vector import to_heading
-from pygame.color import Color
+from zooma.utils.colors import rainbow
+from zooma.utils.distance import get_distance_between
 
 @dataclass
 class BallRecord:
     ball: ChainBall
     target_id: int
 
-def rambow():
-    hue = 0
-    step = 31
-    while True:
-        color = Color(0)
-        color.hsva = (hue, 100, 100, 100)
-        yield color
-        hue = (hue + step) % 360
+@dataclass
+class InsertionRecord:
+    index: int
+    target_id: int
 
 class Chain(Entity):
     def __init__(self, path: Path, balls: list[ChainBall]):
         super().__init__()
         self.path = path
         
-        self.color_gen = rambow()
+        self.color_gen = rainbow()
         self.data: list[BallRecord] = []
         for ball in balls:
             id = len(self.data)
             self.data.append(BallRecord(ball.with_id(id).with_color(next(self.color_gen)), 0))
+
+    def check_collision(self, ball: Ball) -> Ball:
+        for i, chain_ball in enumerate(self.balls):
+            distance = get_distance_between(ball, chain_ball)
+            if distance <= ball.radius + chain_ball.radius:
+                return (i, chain_ball)
+        return None
+
+    def get_insertion_point(self, ball: Ball) -> InsertionRecord | None:
+        #whichever segment has the dot product between 0 and 1 is the nearest segment
+        #return the index of the nearest segment
+
+        #check if the ball is colliding with the chain
+        collision_index, collision_ball = self.checkCollision(ball)
+        if collision_index is None:
+            #IS THIS RIGHT?
+            return None 
+
+        closest_distance = float('inf')
+        path_segment_vector = None
+        
+        #for each path segment, we need to check if its the nearest segment to the ball
+        for i in range(len(self.path.points) - 1):
+            a = self.path.points[i]
+            b = self.path.points[i + 1]
+            ab = b - a
+            ap = ball.position - a
+            #dot product of ap and ab but cap it at 0 and 1
+            #constrains point to one path segment
+            t = max(0, min(1, ap.dot(ab) / ab.length_squared()))
+            point = a + ab * t
+            distance = get_distance_between(ball.position, point)
+            if distance < closest_distance:
+                closest_distance = distance
+                path_segment_vector = ab
+
+        impact_vector = (collision_ball.position - ball.position)
+        alignment = impact_vector.dot(path_segment_vector)
+
+        if_after = alignment > 0
+        insertion_index = collision_index + (1 if if_after else 0)
+
+        target_id = self._compute_target_id(insertion_index)
+
+        return InsertionRecord(insertion_index, target_id)
+
+    def _compute_target_id(self, index: int) -> int:
+        record = self.data[index]
+        return record.target_id
 
     def append_ball(self, ball: ChainBall):
         is_empty = len(self.data) == 0
