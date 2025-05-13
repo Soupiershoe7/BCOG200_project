@@ -74,13 +74,9 @@ class ZoomaGame:
                 pressed_buttons = pygame.mouse.get_pressed()
                 if pressed_buttons[0]:
                     self.shootBall(state)
-                elif pressed_buttons[2]:
-                    self.appendChainBall(state)
             elif event.type == pygame.KEYDOWN:
                 if event.key == K_p:
                     self.toggle_draw_mode(state)
-                elif event.key == K_a:
-                    self.appendChainBall(state)
                 elif event.key == K_ESCAPE:
                     pygame.quit()
                     sys.exit()  
@@ -161,13 +157,6 @@ class ZoomaGame:
         
         state.shots += 1
 
-    def appendChainBall(self, state: ZoomaGameState):
-        position = pygame.mouse.get_pos()
-        new_chain_ball = ChainBall(Vector2(position))
-
-        # Append the new chain ball to the chain
-        state.chain.append_ball(new_chain_ball)
-
 
     def checkOutOfBounds(self, state: ZoomaGameState):
         """ Check for out of bound balls and remove from ball_list """
@@ -237,7 +226,6 @@ class ZoomaGame:
             accuracy = state.hits / state.shots
         self.draw_text(self.screen, f"Hits: {state.hits} Shots: {state.shots} Spawns: {state.spawns} Accuracy: {accuracy:.2f}", (10, 10))
         self.draw_text(self.screen, "Press p to pause", (10, 40))
-        self.draw_text(self.screen, "Press a to append a ball", (10, 70))
         self.draw_text(self.screen, "Press ESC to quit", (10, 100))
         self.draw_text(self.screen, "Press d to toggle draw mode", (10, 130))
 
