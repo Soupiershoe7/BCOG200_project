@@ -140,7 +140,11 @@ class Chain(Entity):
         bonus_speed = 0
         if index > 0:
             gap = self._get_distance_between_ball(index - 1, index)
-            bonus_speed = gap * 0.001
+            bonus_speed = gap * 0.00002
+            if gap < 2:
+                ball.speed = 2
+            else:
+                ball.speed = ball.speed + bonus_speed
         #allow behind balls to catch up to the ball in front of them
         move_speed = speed if speed is not None else ball.speed + bonus_speed
 
