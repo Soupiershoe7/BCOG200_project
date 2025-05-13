@@ -137,10 +137,12 @@ class Chain(Entity):
         # Get this balls target
         target = self.path.points[record.target_id]
         
-        if speed is None:
-            move_speed = ball.speed
-        else:
-            move_speed = speed
+        bonus_speed = 0
+        if index > 0:
+            gap = self._get_distance_between_ball(index - 1, index)
+            bonus_speed = gap * 0.001
+        #allow behind balls to catch up to the ball in front of them
+        move_speed = speed if speed is not None else ball.speed + bonus_speed
 
         #how far away is goal
         vector_to_target = target - ball.position
@@ -189,6 +191,46 @@ class Chain(Entity):
     def _advanceTarget(self, index: int):
         record = self.data[index]
 
-        record.target_id += 1
-        if record.target_id >= len(self.path.points):
-            record.target_id = 0
+        #suggested by copilot to detect when a ball passes another ball (when the path is a loop)
+        def distance_modN(a: int, b: int, n: int) -> int: 
+            return (b - a) % n
+
+        previous_ball_target = None
+        if index > 0:
+            previous_ball_target = self.data[index - 1].target_id
+
+        new_id = (record.target_id + 1) % len(self.path.points)
+        if previous_ball_target is None:
+            record.target_id = new_id
+            return
+
+        distance = distance_modN(new_id, previous_ball_target, len(self.path.points))
+        limit = (len(self.path.points) - 1) * .9
+            
+        if distance < limit:
+            record.target_id = new_id
+
+    def _get_distance_between_ball(self, first_id: int, second_id: int) -> int:
+        first_record = self.data[first_id]
+        second_record = self.data[second_id]
+
+        first_ball = first_record.ball
+        first_target = first_record.target_id
+        first_radius = first_ball.radius
+        second_ball = second_record.ball
+        second_target = second_record.target_id
+        second_radius = second_ball.radius
+
+        path_length = 0
+        index = first_target
+        while index != second_target:
+            a = self.path.points[index]
+            b = self.path.points[(index + 1) % len(self.path.points)]
+            path_length += a.distance_to(b)
+            index = (index + 1) % len(self.path.points)
+            
+        first_distance = first_ball.position.distance_to(self.path.points[first_target])
+        second_distance = second_ball.position.distance_to(self.path.points[second_target])
+
+        return path_length + first_distance - second_distance - first_radius - second_radius
+        
