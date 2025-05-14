@@ -85,6 +85,11 @@ class ZoomaGame:
                     state.paused = not state.paused
                 elif event.key == K_r:
                     self._reset_chain(state)
+                elif event.key == K_a:
+                    ball = ChainBall(Vector2(WIDTH // 2, HEIGHT // 2))
+                    chain = Chain(state.path, [ball])
+                    chain.move_speed = random.uniform(2.4, 2.8)
+                    state.entity_list.append(chain)
 
 
         # Current ball always follows the mouse
