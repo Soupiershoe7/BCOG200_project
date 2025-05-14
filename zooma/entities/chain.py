@@ -6,7 +6,6 @@ from zooma.entities.ball import ChainBall, Ball, ShotBall
 from zooma.entities.path import Path
 
 from zooma.utils.vector import to_heading
-from zooma.utils.colors import rainbow
 from zooma.utils.distance import get_distance_between
 
 @dataclass
@@ -17,7 +16,7 @@ class BallRecord:
 @dataclass
 class InsertionRecord:
     index: int
-    target_id:dataclass
+    target_id: int
 
 @dataclass
 class ChainCollisionRecord:
@@ -37,13 +36,12 @@ class Chain(Entity):
         super().__init__()
         self.path = path
         
-        self.color_gen = rainbow()
         self.data: list[BallRecord] = []
-        self.move_speed = 2
+        self.move_speed = 1
         for ball in balls:
             if isinstance(ball, ChainBall):
                 id = len(self.data)
-                new_ball = ball.with_id(id).with_color(next(self.color_gen))
+                new_ball = ball.with_id(id)
                 record = BallRecord(new_ball, 0)
             elif isinstance(ball, BallRecord):
                 record = ball
@@ -69,6 +67,17 @@ class Chain(Entity):
 
     def get_target_id(self) -> int:
         return self.data[0].target_id
+
+    def get_last_ball(self) -> ChainBall:
+        return self.data[-1].ball
+
+    def get_first_ball(self) -> ChainBall:
+        return self.data[0].ball
+
+    def get_ball(self, index: int) -> ChainBall:
+        if index >= len(self.data) or index < 0:
+            return None
+        return self.data[index].ball
 
     def split(self, index: int) -> "Chain":
         if (index >= len(self.data)):
@@ -138,7 +147,7 @@ class Chain(Entity):
 
     def insert_ball(self, ball: ChainBall, insertion_record: InsertionRecord):
         id = len(self.data)
-        ball = ball.with_id(id).with_color(next(self.color_gen))
+        ball = ball.with_id(id)
         new_record = BallRecord(ball, insertion_record.target_id)
         self.data.insert(insertion_record.index, new_record)
 
@@ -154,13 +163,16 @@ class Chain(Entity):
             new_target_id = 0
         
         id = len(self.data)
-        ball = ball.with_id(id).with_color(next(self.color_gen))
+        ball = ball.with_id(id)
         self.data.append(BallRecord(ball, new_target_id))
 
     def append_chain(self, chain: "Chain"):
         for record in chain.data:
             self.append_ball(record.ball)
-        
+
+    def remove_ball(self, index: int):
+        self.data.pop(index)
+
     def draw(self, screen):
         for record in self.data:
             record.ball.draw(screen)

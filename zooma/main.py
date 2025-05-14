@@ -9,6 +9,9 @@ from zooma.entities.entity import Entity
 from zooma.entities.ball import Ball, ChainBall, TargetBall, ShotBall, HeldBall
 from zooma.entities.path import Path
 from zooma.entities.chain import Chain
+from zooma.entities.emitter import Emitter
+from zooma.entities.deathHole import DeathHole
+from zooma.utils.colors import LevelColors
 
 WIDTH, HEIGHT = 800, 600
 
@@ -20,6 +23,8 @@ class ZoomaGameState:
         self.spawns = 0
 
         self.entity_list = []
+        self.emitter: Emitter = None
+        self.death_hole: DeathHole = None
         
         self.held_ball: HeldBall = None
         self.chain: Chain = None
@@ -28,6 +33,8 @@ class ZoomaGameState:
         self.paused = False
         self.draw_mode = False
         self.path: Path = None
+
+        self.level_colors: LevelColors = LevelColors(3)
 
 # Spawn a target every 1 second.
 TARGET_SPAWN_INTERVAL = 1000
@@ -46,7 +53,7 @@ class ZoomaGame:
         """ Run the game loop """
 
         state = ZoomaGameState()
-        state.held_ball = HeldBall()
+        state.held_ball = HeldBall(state.level_colors.get_color())
         state.path = Path([])
         state.entity_list.append(state.path)
 
@@ -86,7 +93,7 @@ class ZoomaGame:
                 elif event.key == K_r:
                     self._reset_chain(state)
                 elif event.key == K_a:
-                    ball = ChainBall(Vector2(WIDTH // 2, HEIGHT // 2))
+                    ball = ChainBall(Vector2(WIDTH // 2, HEIGHT // 2), state.level_colors.get_color())
                     chain = Chain(state.path, [ball])
                     chain.move_speed = random.uniform(2.4, 2.8)
                     state.entity_list.append(chain)
@@ -104,7 +111,34 @@ class ZoomaGame:
             # self.spawnTarget(state)
             pass
         if state.draw_mode:
-            state.path.addPoint(pygame.mouse.get_pos())
+            new_point = pygame.mouse.get_pos()
+            
+            was_empty = len(state.path.points) == 0
+            state.path.addPoint(new_point)
+
+            # Creating first point in path
+            if was_empty:
+                state.emitter = Emitter(new_point, state.level_colors)
+                state.entity_list.append(state.emitter)
+
+        self.try_to_emit_chain(state)
+                
+
+    def try_to_emit_chain(self, state: ZoomaGameState):
+        emitter = state.emitter
+        if emitter is None:
+            return
+
+        for entity in state.entity_list:
+            if isinstance(entity, Chain) and emitter.check_collision(entity):
+                return
+        
+        new_ball = ChainBall(emitter.position, emitter.get_color())
+        chain = Chain(state.path, [new_ball])
+        chain.mode_speed = 2
+        state.entity_list.append(chain)
+
+
 
     def split_chain(self, state: ZoomaGameState, key: int):
         index = key - K_1 + 1
@@ -133,16 +167,16 @@ class ZoomaGame:
         for entity in to_remove:
             state.entity_list.remove(entity)
         
-        # Create chain 1
-        ball = ChainBall(Vector2(WIDTH // 2, HEIGHT // 2))
-        chain = Chain(state.path, [ball])
-        chain.move_speed = 2.3
-        state.entity_list.append(chain)
+        # # Create chain 1
+        # ball = ChainBall(Vector2(WIDTH // 2, HEIGHT // 2))
+        # chain = Chain(state.path, [ball])
+        # chain.move_speed = 2.3
+        # state.entity_list.append(chain)
 
-        # Create chain 2
-        ball = ChainBall(Vector2(0, 0))
-        chain = Chain(state.path, [ball])
-        state.entity_list.append(chain)
+        # # Create chain 2
+        # ball = ChainBall(Vector2(0, 0))
+        # chain = Chain(state.path, [ball])
+        # state.entity_list.append(chain)
 
     def updateEntities(self, state: ZoomaGameState):
         if state.paused:
@@ -170,9 +204,18 @@ class ZoomaGame:
     def toggle_draw_mode(self, state: ZoomaGameState):
         if state.draw_mode:
             state.draw_mode = False
+            state.death_hole = DeathHole(state.path.points[-1])
+            state.entity_list.append(state.death_hole)
         else:
             state.draw_mode = True
             state.path.clear()
+            # remove emitter
+            if state.emitter != None and state.emitter in state.entity_list:
+                state.entity_list.remove(state.emitter)
+                state.emitter = None
+            if state.death_hole != None and state.death_hole in state.entity_list:
+                state.entity_list.remove(state.death_hole)
+                state.death_hole = None
 
 
     def spawnTarget(self, state: ZoomaGameState):
@@ -186,11 +229,11 @@ class ZoomaGame:
 
     def shootBall(self, state: ZoomaGameState):
         """ Shoot the held ball """
-        ball_just_shot = ShotBall(state.held_ball.position)
+        ball_just_shot = ShotBall(state.held_ball.position, state.held_ball.color)
 
         state.entity_list.append(ball_just_shot)
 
-        state.held_ball = HeldBall()
+        state.held_ball = HeldBall(state.level_colors.get_color())
         
         state.shots += 1
 
@@ -209,6 +252,19 @@ class ZoomaGame:
     def checkCollisions(self, state: ZoomaGameState):
         """ Check for collisions between balls and targets """
         to_remove = set()
+
+        # Do Death first
+        for entity in state.entity_list:
+            if isinstance(entity, DeathHole):
+                for other in state.entity_list:
+                    if isinstance(other, Chain) and entity.check_collision(other):
+                        other.remove_ball(0)
+                        if len(other.data) == 0:
+                            to_remove.add(other)
+
+        for remove in to_remove:
+            if remove in state.entity_list:
+                state.entity_list.remove(remove)
 
         for entity in state.entity_list:
             can_collide = isinstance(entity, ShotBall) or isinstance(entity, Chain)
@@ -231,16 +287,51 @@ class ZoomaGame:
 
     def checkShotBallCollision(self, state: ZoomaGameState, shot_ball: ShotBall, entity: Entity):
         if isinstance(entity, Chain):
-            #TODO check if collision ball color matches entity
             collision_record = entity.check_collision(shot_ball)
             if not collision_record:
                 return False
-
+                
             insertion_record = entity.get_insertion_point(shot_ball)
 
-            new_ball = ChainBall(shot_ball.position)
-            entity.insert_ball(new_ball, insertion_record)
+
+            match_count = 1
+            match_list = []
+            index = insertion_record.index
+            while True:
+                ball = entity.get_ball(index)
+                if ball is None or ball.color != shot_ball.color:
+                    break
+                match_count += 1
+                match_list.append(index)
+                index += 1
+
+            index = insertion_record.index - 1
+            while True:
+                ball = entity.get_ball(index)
+                if ball is None or ball.color != shot_ball.color:
+                    break
+                match_count += 1
+                match_list.append(index)
+                index -= 1
+            
+            print("Match count: ", match_count)
+            if match_count < 3:
+                new_ball = ChainBall(shot_ball.position, shot_ball.color)
+                entity.insert_ball(new_ball, insertion_record)
+            else:
+                # remove balls
+                match_list.sort(reverse=True)
+                for index in match_list:
+                    entity.remove_ball(index)
+                    print("Removed ball at index", index)
+                new_entity = entity.split(match_list[-1])
+                if new_entity is not None:
+                    state.entity_list.append(new_entity)
+                if len(entity.data) == 0:
+                    state.entity_list.remove(entity)
+            
             return True
+
         else:
             print("Unhandled Collision with non-chain entity")
     
@@ -255,11 +346,9 @@ class ZoomaGame:
         chain2_target_id = chain2.get_target_id()
         
         if chain1_target_id < chain2_target_id:
-            print("Appending chain 1 to chain 2", collision_record)
             chain2.append_chain(chain1)
             state.entity_list.remove(chain1)
         else:
-            print("Appending chain 2 to chain 1", collision_record)
             chain1.append_chain(chain2)
             state.entity_list.remove(chain2)
 

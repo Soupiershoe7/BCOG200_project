@@ -1,4 +1,5 @@
 from pygame.color import Color
+import random
 
 def rainbow():
     """Yields a sequence of colors cycling through the hue spectrum."""
@@ -9,3 +10,26 @@ def rainbow():
         color.hsva = (hue, 100, 100, 100)
         yield color
         hue = (hue + step) % 360
+
+DEFAULT_COLORS = [
+    Color('red'),
+    Color('green'),
+    Color('blue'),
+    Color('yellow'),
+]
+
+class LevelColors:
+    def __init__(self, difficulty: int, color_set: list[Color] = DEFAULT_COLORS):
+        self.colors = color_set[:difficulty]
+        self.color_cluster_sizes = [1, 2, 3]
+
+    def get_color(self):
+        return random.choice(self.colors)
+        
+    def get_color_generator(self):
+        while True:
+            cluster_size = random.choice(self.color_cluster_sizes)
+            color = random.choice(self.colors)
+            for _ in range(cluster_size):
+                yield color
+    

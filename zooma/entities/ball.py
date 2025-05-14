@@ -30,10 +30,9 @@ class TargetBall(Ball):
         pass
 
 class HeldBall(Ball):
-    def __init__(self, position = None):
-        if position is None:
-            position = Vector2(0, 0)
-        super().__init__(position, Color('green'))
+    def __init__(self, color: Color):
+        position = Vector2(0, 0)
+        super().__init__(position, color)
 
     def set_position(self, position):
         self.position = Vector2(position)
@@ -42,8 +41,8 @@ class HeldBall(Ball):
         pass
 
 class ShotBall(Ball):
-    def __init__(self, position):
-        super().__init__(position, Color('blue'))
+    def __init__(self, position, color: Color):
+        super().__init__(position, color)
 
         self.heading = Vector2(0, -1)
         self.speed = 10
@@ -55,8 +54,8 @@ class ShotBall(Ball):
         self.position += self.heading * self.speed
 
 class ChainBall(Ball):
-    def __init__ (self, position):
-        super().__init__(position, Color('yellow'))
+    def __init__ (self, position, color: Color):
+        super().__init__(position, color)
 
         # self.heading = Vector2(1, 0)
         self.speed = 2
