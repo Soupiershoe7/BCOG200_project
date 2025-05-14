@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pygame.math import Vector2
 
 from zooma.entities.entity import Entity
-from zooma.entities.ball import ChainBall, Ball
+from zooma.entities.ball import ChainBall, Ball, ShotBall
 from zooma.entities.path import Path
 
 from zooma.utils.vector import to_heading
@@ -19,6 +19,18 @@ class InsertionRecord:
     index: int
     target_id:dataclass
 
+@dataclass
+class ChainCollisionRecord:
+    index: int
+    ball: ChainBall
+    
+@dataclass
+class CollisionRecord:
+    index: int
+    ball: Ball
+    other: ShotBall | ChainCollisionRecord
+
+
 
 class Chain(Entity):
     def __init__(self, path: Path, balls: list[ChainBall]):
@@ -27,28 +39,43 @@ class Chain(Entity):
         
         self.color_gen = rainbow()
         self.data: list[BallRecord] = []
+        self.move_speed = 2
         for ball in balls:
             id = len(self.data)
             self.data.append(BallRecord(ball.with_id(id).with_color(next(self.color_gen)), 0))
 
-    def check_collision(self, ball: Ball) -> tuple[int, ChainBall] | None:
-        for i, record in enumerate(self.data):
-            distance = get_distance_between(ball, record.ball)
-            if distance <= ball.radius + record.ball.radius:
-                return (i, record.ball)
+    def check_collision(self, entity: Entity) -> CollisionRecord | None:
+        if isinstance(entity, Ball):
+            for i, record in enumerate(self.data):
+                if record.ball.check_collision(entity):
+                    return CollisionRecord(i, record.ball, entity)
+        elif isinstance(entity, Chain):
+            other_first = entity.data[0].ball
+            other_last = entity.data[-1].ball
+            my_first = self.data[0].ball
+            my_last = self.data[-1].ball
+
+            if my_first.check_collision(other_last):
+                return CollisionRecord(0, my_first, ChainCollisionRecord(len(entity.data) - 1, other_last))
+            elif my_last.check_collision(other_first):
+                return CollisionRecord(len(self.data) - 1, my_last, ChainCollisionRecord(0, other_first))
+                
         return None
+
+    def get_target_id(self) -> int:
+        return self.data[0].target_id
 
     def get_insertion_point(self, ball: Ball) -> InsertionRecord | None:
         #whichever segment has the dot product between 0 and 1 is the nearest segment
         #return the index of the nearest segment
-
+    
         #check if the ball is colliding with the chain
-        collision_event = self.check_collision(ball)
-
-        if not collision_event:
+        collision_record = self.check_collision(ball)
+        
+        if not collision_record:
             return None
 
-        collision_index, collision_ball = collision_event
+        
 
         closest_distance = float('inf')
         path_segment_vector = None
@@ -70,13 +97,13 @@ class Chain(Entity):
 
         # Shouldn't happen
         if path_segment_vector is None:
-            return InsertionRecord(collision_index, 0)
+            return InsertionRecord(collision_record.index, 0)
         
-        impact_vector = (collision_ball.position - ball.position)
+        impact_vector = (collision_record.ball.position - ball.position)
         alignment = impact_vector.dot(path_segment_vector)
 
         if_after = alignment > 0
-        insertion_index = collision_index + (1 if if_after else 0)
+        insertion_index = collision_record.index + (1 if if_after else 0)
 
         target_id = self._compute_target_id(insertion_index)
 
@@ -109,6 +136,9 @@ class Chain(Entity):
         ball = ball.with_id(id).with_color(next(self.color_gen))
         self.data.append(BallRecord(ball, new_target_id))
 
+    def append_chain(self, chain: "Chain"):
+        for record in chain.data:
+            self.append_ball(record.ball)
         
     def draw(self, screen):
         for record in self.data:
@@ -140,13 +170,10 @@ class Chain(Entity):
         bonus_speed = 0
         if index > 0:
             gap = self._get_distance_between_ball(index - 1, index)
-            bonus_speed = gap * 0.00002
-            if gap < 2:
-                ball.speed = 2
-            else:
-                ball.speed = ball.speed + bonus_speed
+            bonus_speed = gap * 0.001
+
         #allow behind balls to catch up to the ball in front of them
-        move_speed = speed if speed is not None else ball.speed + bonus_speed
+        move_speed = speed if speed is not None else self.move_speed + bonus_speed
 
         #how far away is goal
         vector_to_target = target - ball.position
@@ -237,4 +264,14 @@ class Chain(Entity):
         second_distance = second_ball.position.distance_to(self.path.points[second_target])
 
         return path_length + first_distance - second_distance - first_radius - second_radius
+
+    def _get_distance_between_target(self, first_id: int, second_id: int) -> int:
+        path_length = 0
+        index = first_id
+        while index != second_id:
+            a = self.path.points[index]
+            b = self.path.points[(index + 1) % len(self.path.points)]
+            path_length += a.distance_to(b)
+            index = (index + 1) % len(self.path.points)
+        return path_length
         

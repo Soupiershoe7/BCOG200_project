@@ -98,6 +98,9 @@ class ChainBall(Ball):
         #move
         self.position += heading * min(self.speed, max_distance)
 
+    def check_collision(self, other_ball: Ball):
+        distance = self.position.distance_to(other_ball.position)
+        return distance < (self.radius + other_ball.radius)
 
     def set_target(self, target):
         if isinstance(target, ChainBall):
