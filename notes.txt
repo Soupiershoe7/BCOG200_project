@@ -157,6 +157,7 @@ Things to do
   - Goal Display
   - Stop emitter on goal completion
   - End Game on death hole - eat balls!
+  - Push front balls till insertion is complete
 
 Extra
   - coins
