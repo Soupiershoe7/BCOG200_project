@@ -140,37 +140,28 @@ New TODO LIST
 Missing entities
   - Shooter
     - Pretty easy
-  - Death hole
-    - A quick pass of something that makes balls vanish
-  - Emitter
-    - Generate balls of random colors
 
 Things to do
   - Clean update
     - Chain ball needs to be dumb moveable ball
     - dead code
   - Utility functions
-    - check for collisions
-    - ball on ball collision vs chain on chain collision
-    - create a Gap
     - reverse chain 
-    - 
-  - Rough out death hold and emitter, automatically create at begin and end of path and turn on.
-    - Collision checks of balls with death hole and removal
-    - Emitter needs to know when/if in can emit
+      - on split scan for prior chains matching color and reverse chain
+    - default zero speed chain, only one chain has speed
+  - Save level / load level
+  - order chains by distance to emitter to find last? to find adjacent chains
+  - Turret ( Frog )
+    - Next Ball Display
+  - Increment Score
+  - Goal Display
+  - Stop emitter on goal completion
+  - End Game on death hole - eat balls!
 
-
-  - Collisions on chain
-    1. Ball fires and intersects chain and we get a report of where it is hit.
-      a. Chain checks for intersections and reports yes/no and where
-        I. Game can eeventualy do segment detection but not first pass.
-        II. Iterate through all managed balls and check for intersections
-        III. Determine direction of insertion relative to path direction and ball direction
-      b. Insert at position
-        I. insert ball into data list at correct sequence
-        II. assign a position to ball
-        III. move balls in the direction of travel
-          ** Chain needs to know direction of path which is not NECESSARILY direction of travel **
-  - chain splitting and merging
-  - [Low Priority] fixed place shooter
+Extra
+  - coins
+  - powerups
+  - gap shot
+    - create a Gap
+       - crossing path (dot product inversion) attaches multiplier stat to ball
 
