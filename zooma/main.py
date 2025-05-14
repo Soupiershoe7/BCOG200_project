@@ -34,7 +34,7 @@ class ZoomaGameState:
         self.draw_mode = False
         self.path: Path = None
 
-        self.level_colors: LevelColors = LevelColors(3)
+        self.level_colors: LevelColors = LevelColors(4)
 
 # Spawn a target every 1 second.
 TARGET_SPAWN_INTERVAL = 1000
