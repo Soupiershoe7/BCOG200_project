@@ -90,6 +90,8 @@ class ZoomaGame:
                     chain = Chain(state.path, [ball])
                     chain.move_speed = random.uniform(2.4, 2.8)
                     state.entity_list.append(chain)
+                elif event.key in (K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9):
+                    self.split_chain(state, event.key)
 
 
         # Current ball always follows the mouse
@@ -103,6 +105,24 @@ class ZoomaGame:
             pass
         if state.draw_mode:
             state.path.addPoint(pygame.mouse.get_pos())
+
+    def split_chain(self, state: ZoomaGameState, key: int):
+        index = key - K_1 + 1
+        print(f"split at {index}")
+
+        first_chain = None
+        for entity in state.entity_list:
+            if isinstance(entity, Chain):
+                first_chain = entity
+                break
+
+        if first_chain is None:
+            return
+
+        new_chain = first_chain.split(index)
+        if new_chain is not None:
+            state.entity_list.append(new_chain)
+            
 
     def _reset_chain(self, state: ZoomaGameState):
         to_remove = []

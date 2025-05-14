@@ -33,7 +33,7 @@ class CollisionRecord:
 
 
 class Chain(Entity):
-    def __init__(self, path: Path, balls: list[ChainBall]):
+    def __init__(self, path: Path, balls: list[ChainBall | BallRecord]):
         super().__init__()
         self.path = path
         
@@ -41,8 +41,13 @@ class Chain(Entity):
         self.data: list[BallRecord] = []
         self.move_speed = 2
         for ball in balls:
-            id = len(self.data)
-            self.data.append(BallRecord(ball.with_id(id).with_color(next(self.color_gen)), 0))
+            if isinstance(ball, ChainBall):
+                id = len(self.data)
+                new_ball = ball.with_id(id).with_color(next(self.color_gen))
+                record = BallRecord(new_ball, 0)
+            elif isinstance(ball, BallRecord):
+                record = ball
+            self.data.append(record)
 
     def check_collision(self, entity: Entity) -> CollisionRecord | None:
         if isinstance(entity, Ball):
@@ -65,6 +70,22 @@ class Chain(Entity):
     def get_target_id(self) -> int:
         return self.data[0].target_id
 
+    def split(self, index: int) -> "Chain":
+        if (index >= len(self.data)):
+            print(f"Cannot split chain at index {index} because chain has {len(self.data)} balls")
+            return None
+        
+        print("Splitting chain at index", index)
+        print("Chain Before: ", [record.ball.id for record in self.data])
+        new_chain = Chain(self.path, self.data[index:])
+        self.data = self.data[:index]
+        # TODO remove
+        new_chain.move_speed = self.move_speed * .9
+        self.move_speed *= 1.5
+
+        return new_chain
+        
+        
     def get_insertion_point(self, ball: Ball) -> InsertionRecord | None:
         #whichever segment has the dot product between 0 and 1 is the nearest segment
         #return the index of the nearest segment
