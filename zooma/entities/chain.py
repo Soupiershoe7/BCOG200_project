@@ -290,13 +290,4 @@ class Chain(Entity):
 
         return path_length + first_distance - second_distance - first_radius - second_radius
 
-    def _get_distance_between_target(self, first_id: int, second_id: int) -> int:
-        path_length = 0
-        index = first_id
-        while index != second_id:
-            a = self.path.points[index]
-            b = self.path.points[(index + 1) % len(self.path.points)]
-            path_length += a.distance_to(b)
-            index = (index + 1) % len(self.path.points)
-        return path_length
         

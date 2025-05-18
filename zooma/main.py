@@ -12,8 +12,9 @@ from zooma.entities.chain import Chain
 from zooma.entities.emitter import Emitter
 from zooma.entities.deathHole import DeathHole
 from zooma.utils.colors import LevelColors
+from zooma.entities.forg import Forg
 
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 1000, 800
 
 
 class ZoomaGameState:
@@ -29,19 +30,15 @@ class ZoomaGameState:
         self.entity_list = []
         self.emitter: Emitter = None
         self.death_hole: DeathHole = None
-        
-        self.held_ball: HeldBall = None
-        self.chain: Chain = None
-        self.last_spawn_time = 0
+        self.forg: Forg = None
 
         self.paused = True
         self.draw_mode = False
         self.path: Path = None
+        self.last_message = ""
 
         self.level_colors: LevelColors = LevelColors(4)
 
-# Spawn a target every 1 second.
-TARGET_SPAWN_INTERVAL = 1000
 
 class ZoomaGame:
     def __init__(self):
@@ -57,9 +54,11 @@ class ZoomaGame:
         """ Run the game loop """
 
         state = ZoomaGameState()
-        state.held_ball = HeldBall(state.level_colors.get_color())
         state.path = Path([])
         state.entity_list.append(state.path)
+
+        state.forg = Forg(Vector2(WIDTH / 2, HEIGHT / 2), state.level_colors)
+        state.entity_list.append(state.forg)
 
         self.reset_game(state)
 
@@ -87,6 +86,11 @@ class ZoomaGame:
                 if pressed_buttons[0]:
                     self.shootBall(state)
             elif event.type == pygame.KEYDOWN:
+                # exit game
+                if event.key == K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+                
                 # toggle draw mode
                 if event.key == K_d: 
                     self.toggle_draw_mode(state)
@@ -109,8 +113,7 @@ class ZoomaGame:
 
 
         # Current ball always follows the mouse
-        state.held_ball.set_position(pygame.mouse.get_pos())
-        # state.chain_ball.set_target(pygame.mouse.get_pos())
+        state.forg.set_heading(Vector2(pygame.mouse.get_pos()))
 
     def doTasks(self, state: ZoomaGameState):
         self.task_draw_mode(state)
@@ -158,7 +161,7 @@ class ZoomaGame:
         for entity in state.entity_list:
             if isinstance(entity, Chain):
                 first_ball = entity.get_first_ball()
-                d = first_ball.position.distance_to(state.path.points[0])
+                d = state.path.distance_between_point_and_position(0, first_ball.position)
                 if d < distance_to_start:
                     distance_to_start = d
                     pusher_chain = entity
@@ -209,6 +212,7 @@ class ZoomaGame:
     def updateEntities(self, state: ZoomaGameState):
         if state.paused:
             return
+
         # Update all the balls
         for entity in state.entity_list:
             entity.update()
@@ -262,17 +266,15 @@ class ZoomaGame:
 
     def shootBall(self, state: ZoomaGameState):
         """ Shoot the held ball """
-        ball_just_shot = ShotBall(state.held_ball.position, state.held_ball.color)
-
+        ball_just_shot = state.forg.shoot()
+        if ball_just_shot is None:
+            return
         state.entity_list.append(ball_just_shot)
 
-        state.held_ball = HeldBall(state.level_colors.get_color())
-        
         state.shots += 1
 
     def swap_held_ball(self, state: ZoomaGameState): 
-        # TODO: make swap ball actually swap
-        state.held_ball = HeldBall(state.level_colors.get_color())
+        state.forg.swap_ball()
 
     def checkOutOfBounds(self, state: ZoomaGameState):
         """ Check for out of bound balls and remove from ball_list """
@@ -377,6 +379,13 @@ class ZoomaGame:
                 shot_score = match_count * 10 * state.combo_mult * chain_mult 
                 state.score += shot_score
                 state.progress_percent += shot_score / 1500
+
+                score_message = f"+{shot_score}"
+                if chain_mult > 1:
+                    score_message += f" Chain x{chain_mult}"
+                if state.combo_mult > 1:
+                    score_message += f" Combo x{state.combo_mult}"
+                state.last_message = score_message
                 print(f"shot: Balls {match_count}, Combo {state.combo_mult}, Chain {state.chain_count} = {shot_score}")
 
             
@@ -423,11 +432,10 @@ class ZoomaGame:
         for entity in state.entity_list:
             entity.draw(self.screen)
 
-        # Held ball is still a special baby.
-        state.held_ball.draw(self.screen)
-
-    def draw_text(self, screen: pygame.Surface, text: str, pos: tuple[int, int]):
+    def draw_text(self, screen: pygame.Surface, text: str, pos: tuple[int, int], centered: bool = False):
         text_surface = self.font.render(text, True, Color('white'))
+        if centered:
+            pos = (pos[0] - text_surface.get_width() / 2, pos[1] - text_surface.get_height() / 2)
         screen.blit(text_surface, pos)
 
     def draw_progress_bar(self, screen: pygame.Surface, state: ZoomaGameState, pos: tuple[int, int]):
@@ -449,8 +457,12 @@ class ZoomaGame:
             accuracy = 0
         else:
             accuracy = state.hits / state.shots
-        self.draw_text(self.screen, f"Score: {state.score}", (180, 10))
-        self.draw_progress_bar(self.screen, state, (420, 10))
+
+        center_x = WIDTH / 2
+        self.draw_text(self.screen, f"Score: {state.score}", (center_x - 200, 10))
+        if state.last_message:
+            self.draw_text(self.screen, state.last_message, (center_x, 50), centered=True)
+        self.draw_progress_bar(self.screen, state, (center_x + 50, 10))
 
     
 

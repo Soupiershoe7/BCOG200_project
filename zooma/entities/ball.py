@@ -56,8 +56,8 @@ class ShotBall(Ball):
         self.heading = Vector2(0, -1)
         self.speed = 10
 
-    def set_heading(self, angle):
-        self.heading = Vector2(math.cos(angle), math.sin(angle))
+    def set_heading(self, heading: Vector2):
+        self.heading = heading
         
     def update(self):
         self.position += self.heading * self.speed
