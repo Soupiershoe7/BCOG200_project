@@ -29,7 +29,7 @@ class CollisionRecord:
     ball: Ball
     other: ShotBall | ChainCollisionRecord
 
-
+append_id = 1
 
 class Chain(Entity):
     def __init__(self, path: Path, balls: list[ChainBall | BallRecord]):
@@ -38,7 +38,9 @@ class Chain(Entity):
         
         self.data: list[BallRecord] = []
         # TODO: playtest for speed
-        self.move_speed = 1.5
+        self.move_speed = 0
+
+        # Create record for each ball
         for ball in balls:
             if isinstance(ball, ChainBall):
                 id = len(self.data)
@@ -144,29 +146,21 @@ class Chain(Entity):
         return record.target_id
 
     def insert_ball(self, ball: ChainBall, insertion_record: InsertionRecord):
-        id = len(self.data)
+        id = 0
         ball = ball.with_id(id)
         new_record = BallRecord(ball, insertion_record.target_id)
         self.data.insert(insertion_record.index, new_record)
 
-    def append_ball(self, ball: ChainBall):
-        is_empty = len(self.data) == 0
-        if not is_empty:
-            # get the target_id of the last ball
-            prev_target_id = self.data[-1].target_id
-            new_target_id = prev_target_id - 1
-            if new_target_id < 0:
-                new_target_id = len(self.path.points) - 1
-        else:
-            new_target_id = 0
-        
-        id = len(self.data)
-        ball = ball.with_id(id)
-        self.data.append(BallRecord(ball, new_target_id))
-
     def append_chain(self, chain: "Chain"):
+        global append_id
+        append_id += 1
+        last_ball = self.get_last_ball()
+        last_ball_id = last_ball.id if last_ball else 0
         for record in chain.data:
-            self.append_ball(record.ball)
+            ball_id = last_ball_id + 1
+            record.ball.with_id(ball_id)
+            print(f"[{append_id}] Append Ball: at {record.target_id}")
+            self.data.append(record)
 
     def remove_ball(self, index: int):
         self.data.pop(index)

@@ -34,7 +34,7 @@ class ZoomaGameState:
         self.chain: Chain = None
         self.last_spawn_time = 0
 
-        self.paused = False
+        self.paused = True
         self.draw_mode = False
         self.path: Path = None
 
@@ -87,20 +87,24 @@ class ZoomaGame:
                 if pressed_buttons[0]:
                     self.shootBall(state)
             elif event.type == pygame.KEYDOWN:
-                if event.key == K_d:
+                # toggle draw mode
+                if event.key == K_d: 
                     self.toggle_draw_mode(state)
-                elif event.key == K_p:
+                
+                # toggle pause
+                elif event.key == K_p: 
                     state.paused = not state.paused
-                elif event.key == K_SPACE:
+
+                # swap held ball
+                elif event.key == K_SPACE: 
                     self.swap_held_ball(state)
-                elif event.key == K_r:
+                
+                # reset game
+                elif event.key == K_r: 
                     self.reset_game(state)
-                elif event.key == K_a:
-                    ball = ChainBall(Vector2(WIDTH // 2, HEIGHT // 2), state.level_colors.get_color())
-                    chain = Chain(state.path, [ball])
-                    chain.move_speed = random.uniform(2.4, 2.8)
-                    state.entity_list.append(chain)
-                elif event.key in (K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9):
+                
+                # split at i
+                elif event.key in (K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9): 
                     self.split_chain(state, event.key)
 
 
@@ -109,10 +113,12 @@ class ZoomaGame:
         # state.chain_ball.set_target(pygame.mouse.get_pos())
 
     def doTasks(self, state: ZoomaGameState):
-        current_time = pygame.time.get_ticks()
-        if current_time - state.last_spawn_time > TARGET_SPAWN_INTERVAL:
-            # self.spawnTarget(state)
-            pass
+        self.task_draw_mode(state)
+        self.task_emit_chain(state)
+        self.task_motivate_chains(state)
+
+    def task_draw_mode(self, state: ZoomaGameState):
+        # add points to drawing
         if state.draw_mode:
             new_point = pygame.mouse.get_pos()
             
@@ -124,12 +130,13 @@ class ZoomaGame:
                 state.emitter = Emitter(new_point, state.level_colors)
                 state.entity_list.append(state.emitter)
 
+    def task_emit_chain(self, state: ZoomaGameState):
         self.try_to_emit_chain(state)
 
         if state.emitter is not None and state.emitter.is_active() and state.progress_percent >= 1:
             state.emitter.deactivate()
+            
             print("ZOOMA!")
-                
 
     def try_to_emit_chain(self, state: ZoomaGameState):
         emitter = state.emitter
@@ -142,8 +149,24 @@ class ZoomaGame:
         
         new_ball = ChainBall(emitter.position, emitter.get_color())
         chain = Chain(state.path, [new_ball])
-        chain.mode_speed = 2
         state.entity_list.append(chain)
+
+    def task_motivate_chains(self, state: ZoomaGameState):
+        pusher_chain = None
+        distance_to_start = float('inf')
+
+        for entity in state.entity_list:
+            if isinstance(entity, Chain):
+                first_ball = entity.get_first_ball()
+                d = first_ball.position.distance_to(state.path.points[0])
+                if d < distance_to_start:
+                    distance_to_start = d
+                    pusher_chain = entity
+        
+        if pusher_chain is not None and pusher_chain.move_speed == 0:
+            print("Motivating chain", pusher_chain.get_first_ball().id)
+            pusher_chain.move_speed = 1
+
 
     def split_chain(self, state: ZoomaGameState, key: int):
         index = key - K_1 + 1
@@ -161,6 +184,8 @@ class ZoomaGame:
         new_chain = first_chain.split(index)
         if new_chain is not None:
             state.entity_list.append(new_chain)
+            print("special split move speed lost motivations", first_chain.get_first_ball().id)
+            first_chain.move_speed = 0
             
 
     def reset_game(self, state: ZoomaGameState):
@@ -209,8 +234,12 @@ class ZoomaGame:
             state.draw_mode = False
             state.death_hole = DeathHole(state.path.points[-1])
             state.entity_list.append(state.death_hole)
+
+            # Start game
+            state.paused = False
         else:
             state.draw_mode = True
+            state.paused = True
             state.path.clear()
             # remove emitter
             if state.emitter != None and state.emitter in state.entity_list:
@@ -219,6 +248,7 @@ class ZoomaGame:
             if state.death_hole != None and state.death_hole in state.entity_list:
                 state.entity_list.remove(state.death_hole)
                 state.death_hole = None
+            self.reset_game(state)
 
 
     def spawnTarget(self, state: ZoomaGameState):
@@ -330,11 +360,16 @@ class ZoomaGame:
                 match_list.sort(reverse=True)
                 for index in match_list:
                     entity.remove_ball(index)
+                print("Splitting chain at", match_list[-1])
                 new_entity = entity.split(match_list[-1])
                 if new_entity is not None:
                     state.entity_list.append(new_entity)
+                
                 if len(entity.data) == 0:
                     state.entity_list.remove(entity)
+                else:
+                    print("First chain lost motivation", entity.get_first_ball().id)
+                    entity.move_speed = 0
                     
                 #calculate score
                 state.chain_count += 1

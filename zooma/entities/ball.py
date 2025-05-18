@@ -14,9 +14,18 @@ class Ball(Entity):
         self.color = color
         # TODO: This implies new
         self.is_shot_ball = False
+        self.font = pygame.font.Font(None, 24)
 
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, self.position, self.radius)
+        if hasattr(self, 'id'):
+            self.draw_text(screen, str(self.id), self.position)
+
+    def draw_text(self, screen: pygame.Surface, text: str, pos: Vector2):
+        text_surface = self.font.render(text, True, Color('black'))
+        text_rect = text_surface.get_rect(center=pos)
+        screen.blit(text_surface, text_rect)
+
 
     def check_collision(self, other_ball):
         distance = self.position.distance_to(other_ball.position)
