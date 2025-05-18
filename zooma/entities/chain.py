@@ -37,7 +37,8 @@ class Chain(Entity):
         self.path = path
         
         self.data: list[BallRecord] = []
-        self.move_speed = 1
+        # TODO: playtest for speed
+        self.move_speed = 1.5
         for ball in balls:
             if isinstance(ball, ChainBall):
                 id = len(self.data)
@@ -88,9 +89,6 @@ class Chain(Entity):
         print("Chain Before: ", [record.ball.id for record in self.data])
         new_chain = Chain(self.path, self.data[index:])
         self.data = self.data[:index]
-        # TODO remove
-        new_chain.move_speed = self.move_speed * .9
-        self.move_speed *= 1.5
 
         return new_chain
         
