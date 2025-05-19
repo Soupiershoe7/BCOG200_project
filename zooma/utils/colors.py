@@ -27,9 +27,13 @@ class LevelColors:
         return random.choice(self.colors)
         
     def get_color_generator(self):
+        last_color = None
         while True:
             cluster_size = random.choice(self.color_cluster_sizes)
             color = random.choice(self.colors)
+            if color == last_color:
+                continue
+            last_color = color
             for _ in range(cluster_size):
                 yield color
     

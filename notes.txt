@@ -166,3 +166,15 @@ Extra
     - create a Gap
        - crossing path (dot product inversion) attaches multiplier stat to ball
 
+is inserting push forward
+death hole kills
+only active colors
+saved maps
+
+
+Level Data - List[Levels]
+Level:
+  - Path
+  - Difficulty
+  - Base Move speed
+
