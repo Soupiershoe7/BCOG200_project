@@ -311,6 +311,11 @@ class Chain(Entity):
             self._updateBall(index, remaining_movement)
 
     def _get_collision_distance(self, first_index: int, second_index: int) -> float:
+        if first_index < 0 or first_index >= len(self.data):
+            return 0
+        if second_index < 0 or second_index >= len(self.data):
+            return 0
+        
         first_record = self.data[first_index]
         second_record = self.data[second_index]
 
@@ -325,7 +330,7 @@ class Chain(Entity):
         insertion_record = self._get_insertion_record(index)
         if insertion_record:
             follower_index = index + 1 if self.move_speed >= 0 else index - 1
-            if self._get_collision_distance(index, follower_index) > 0:
+            if self._get_collision_distance(index, follower_index) >= 0:
                 self._delete_insertion_record(index)
 
         has_prev_ball = index > 0 if self.move_speed >= 0 else index < len(self.data) - 1
