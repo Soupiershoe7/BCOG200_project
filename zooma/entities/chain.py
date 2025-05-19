@@ -30,10 +30,15 @@ class CollisionRecord:
     other: ShotBall | ChainCollisionRecord
 
 append_id = 1
+chain_id = 1
 
 class Chain(Entity):
-    def __init__(self, path: Path, balls: list[ChainBall | BallRecord]):
+    def __init__(self, path: Path, entries: list[ChainBall | BallRecord]):
         super().__init__()
+        global chain_id
+        self.id = chain_id
+        chain_id += 1
+        
         self.path = path
         
         self.data: list[BallRecord] = []
@@ -41,15 +46,19 @@ class Chain(Entity):
         self.move_speed = 0
 
         # Create record for each ball
-        for ball in balls:
-            if isinstance(ball, ChainBall):
+        for entry in entries:
+            if isinstance(entry, ChainBall):
                 id = len(self.data)
-                new_ball = ball.with_id(id)
+                new_ball = entry.with_id(id).with_chain_id(self.id)
                 record = BallRecord(new_ball, 0)
-            elif isinstance(ball, BallRecord):
-                record = ball
+            elif isinstance(entry, BallRecord):
+                record = entry
+                record.ball.with_chain_id(self.id)
             self.data.append(record)
 
+    def __len__(self):
+        return len(self.data)
+    
     def check_collision(self, entity: Entity) -> CollisionRecord | None:
         if isinstance(entity, Ball):
             for i, record in enumerate(self.data):
@@ -62,8 +71,12 @@ class Chain(Entity):
             my_last = self.data[-1].ball
 
             if my_first.check_collision(other_last):
+                if not (hasattr(entity, 'shut_the_fuck_up') or hasattr(self, 'shut_the_fuck_up')):
+                    print("Collision between chains", self.id, entity.id)
                 return CollisionRecord(0, my_first, ChainCollisionRecord(len(entity.data) - 1, other_last))
             elif my_last.check_collision(other_first):
+                if not (hasattr(entity, 'shut_the_fuck_up') or hasattr(self, 'shut_the_fuck_up')):
+                    print("Collision between chains", self.id, entity.id)
                 return CollisionRecord(len(self.data) - 1, my_last, ChainCollisionRecord(0, other_first))
                 
         return None
@@ -147,7 +160,7 @@ class Chain(Entity):
 
     def insert_ball(self, ball: ChainBall, insertion_record: InsertionRecord):
         id = 0
-        ball = ball.with_id(id)
+        ball = ball.with_id(id).with_chain_id(self.id)
         new_record = BallRecord(ball, insertion_record.target_id)
         self.data.insert(insertion_record.index, new_record)
 
@@ -158,13 +171,20 @@ class Chain(Entity):
         last_ball_id = last_ball.id if last_ball else 0
         for record in chain.data:
             ball_id = last_ball_id + 1
-            record.ball.with_id(ball_id)
-            print(f"[{append_id}] Append Ball: at {record.target_id}")
+            record.ball.with_id(ball_id).with_chain_id(self.id)
             self.data.append(record)
 
     def remove_ball(self, index: int):
         self.data.pop(index)
 
+    def reverse(self, speed: float):
+        self.move_speed = -speed
+        for record in self.data:
+            record.target_id = max(0, record.target_id - 1)
+
+    def is_reversed(self):
+        return self.move_speed < 0
+    
     def draw(self, screen):
         for record in self.data:
             record.ball.draw(screen)
@@ -173,32 +193,42 @@ class Chain(Entity):
         # No update if no path
         if len(self.path.points) == 0:
             return
-
-        for i in range(len(self.data)):
-            self._updateBall(i)
+        if self.move_speed >= 0:
+            leader = self.get_first_ball()
+            # print("Forward Chain: ", leader.get_label(), " -> ", self.data[0].target_id)
+            for i in range(len(self.data)):
+                self._updateBall(i)
+        else:
+            leader = self.get_last_ball()
+            # print("Backward Chain: ", leader.get_label(), " -> ", self.data[-1].target_id)
+            for i in range(len(self.data) - 1, -1, -1):
+                self._updateBall(i)
 
     def _updateBall(self, index, speed: float = None):
         collided = False
+        # if given speed still exists and is small, return
         if speed and speed < 0.00001:
             return
         
         record = self.data[index]
         ball = record.ball
-        
-        if record.target_id >= len(self.path.points):
-            record.target_id = 0
-            return
+        is_reversing = self.move_speed < 0
         
         # Get this balls target
         target = self.path.points[record.target_id]
         
         bonus_speed = 0
-        if index > 0:
-            gap = self._get_distance_between_ball(index - 1, index)
+        can_boost = index > 0 if not is_reversing else index < len(self.data) - 1
+        if can_boost:
+            previous_ball_index = index - 1 if not is_reversing else index + 1
+            gap = self._get_distance_between_ball(previous_ball_index, index)
             bonus_speed = gap * 0.001
 
         #allow behind balls to catch up to the ball in front of them
-        move_speed = speed if speed is not None else self.move_speed + bonus_speed
+        if speed is not None:
+            move_speed = speed
+        else:
+            move_speed = abs(self.move_speed) + bonus_speed
 
         #how far away is goal
         vector_to_target = target - ball.position
@@ -211,8 +241,11 @@ class Chain(Entity):
         #how much can we move 
         distance_until_collision = 0
 
-        if index > 0: # If there is a ball in front
-            other_ball = self.data[index - 1].ball
+        has_prev_ball = index > 0 if not is_reversing else index < len(self.data) - 1
+        prev_ball_index = index - 1 if not is_reversing else index + 1
+
+        if has_prev_ball: # If there is a ball in front
+            other_ball = self.data[prev_ball_index].ball
             combined_radius = ball.radius + other_ball.radius
 
             vector_to_other_ball = other_ball.position - ball.position
@@ -227,7 +260,6 @@ class Chain(Entity):
                 #actual movement is handled in move section
             else:
                 movement_amount = min(movement_amount, distance_until_collision)
-
 
         #move        
         ball.position += heading * movement_amount
@@ -247,24 +279,23 @@ class Chain(Entity):
     def _advanceTarget(self, index: int):
         record = self.data[index]
 
-        #suggested by copilot to detect when a ball passes another ball (when the path is a loop)
-        def distance_modN(a: int, b: int, n: int) -> int: 
-            return (b - a) % n
-
+        has_prev_ball = index > 0 if self.move_speed >= 0 else index < len(self.data) - 1
+        prev_ball_index = index - 1 if self.move_speed >= 0 else index + 1
+        
         previous_ball_target = None
-        if index > 0:
-            previous_ball_target = self.data[index - 1].target_id
+        if has_prev_ball:
+            previous_ball_target = self.data[prev_ball_index].target_id
 
-        new_id = (record.target_id + 1) % len(self.path.points)
-        if previous_ball_target is None:
-            record.target_id = new_id
-            return
-
-        distance = distance_modN(new_id, previous_ball_target, len(self.path.points))
-        limit = (len(self.path.points) - 1) * .9
-            
-        if distance < limit:
-            record.target_id = new_id
+        if self.move_speed >= 0:
+            new_target_id = min(record.target_id + 1, len(self.path.points) - 1)
+            if previous_ball_target is not None:
+                new_target_id = min(new_target_id, previous_ball_target)
+            record.target_id = new_target_id
+        else:
+            new_target_id = max(record.target_id - 1, 0)
+            if previous_ball_target is not None:
+                new_target_id = max(new_target_id, previous_ball_target)
+            record.target_id = new_target_id
 
     def _get_distance_between_ball(self, first_id: int, second_id: int) -> int:
         first_record = self.data[first_id]

@@ -36,6 +36,7 @@ class ZoomaGameState:
         self.draw_mode = False
         self.path: Path = None
         self.last_message = ""
+        self.base_chain_speed = 0.5
 
         self.level_colors: LevelColors = LevelColors(4)
 
@@ -49,6 +50,10 @@ class ZoomaGame:
         self.clock = pygame.time.Clock() 
 
         self.font = pygame.font.Font(None, 36) #set the font for the text
+
+        pygame.mixer.init()
+        self.zooma_sound = pygame.mixer.Sound("sounds/zooma.wav")
+        
 
     def run(self):
         """ Run the game loop """
@@ -111,6 +116,15 @@ class ZoomaGame:
                 elif event.key in (K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9): 
                     self.split_chain(state, event.key)
 
+                # change chain speed
+                elif event.key in (K_0, K_MINUS, K_EQUALS):
+                    if event.key == K_0:
+                        state.base_chain_speed = 0.5
+                    elif event.key == K_MINUS:
+                        state.base_chain_speed -= 0.05
+                    elif event.key == K_EQUALS:
+                        state.base_chain_speed += 0.05
+
 
         # Current ball always follows the mouse
         state.forg.set_heading(Vector2(pygame.mouse.get_pos()))
@@ -139,6 +153,7 @@ class ZoomaGame:
         if state.emitter is not None and state.emitter.is_active() and state.progress_percent >= 1:
             state.emitter.deactivate()
             
+            self.zooma_sound.play()
             print("ZOOMA!")
 
     def try_to_emit_chain(self, state: ZoomaGameState):
@@ -152,6 +167,7 @@ class ZoomaGame:
         
         new_ball = ChainBall(emitter.position, emitter.get_color())
         chain = Chain(state.path, [new_ball])
+        chain.shut_the_fuck_up = True
         state.entity_list.append(chain)
 
     def task_motivate_chains(self, state: ZoomaGameState):
@@ -166,9 +182,8 @@ class ZoomaGame:
                     distance_to_start = d
                     pusher_chain = entity
         
-        if pusher_chain is not None and pusher_chain.move_speed == 0:
-            print("Motivating chain", pusher_chain.get_first_ball().id)
-            pusher_chain.move_speed = 1
+        if pusher_chain is not None:
+            pusher_chain.move_speed = state.base_chain_speed
 
 
     def split_chain(self, state: ZoomaGameState, key: int):
@@ -253,16 +268,6 @@ class ZoomaGame:
                 state.entity_list.remove(state.death_hole)
                 state.death_hole = None
             self.reset_game(state)
-
-
-    def spawnTarget(self, state: ZoomaGameState):
-        target_pos = self._getRandomPosition(True)
-
-        new_target = TargetBall(target_pos)
-
-        state.entity_list.append(new_target)
-        state.last_spawn_time = pygame.time.get_ticks()
-        state.spawns += 1
 
     def shootBall(self, state: ZoomaGameState):
         """ Shoot the held ball """
@@ -374,20 +379,9 @@ class ZoomaGame:
                     entity.move_speed = 0
                     
                 #calculate score
-                state.chain_count += 1
-                chain_mult = max(1, state.chain_count - 3)
-                shot_score = match_count * 10 * state.combo_mult * chain_mult 
-                state.score += shot_score
-                state.progress_percent += shot_score / 1500
-
-                score_message = f"+{shot_score}"
-                if chain_mult > 1:
-                    score_message += f" Chain x{chain_mult}"
-                if state.combo_mult > 1:
-                    score_message += f" Combo x{state.combo_mult}"
-                state.last_message = score_message
-                print(f"shot: Balls {match_count}, Combo {state.combo_mult}, Chain {state.chain_count} = {shot_score}")
-
+                self.score_update(state, match_count, is_shot=True)
+                # Do chains match... entity and new_entity
+                self.scan_chain_matches(state)
             
             return True
 
@@ -400,20 +394,145 @@ class ZoomaGame:
         collision_record = chain1.check_collision(chain2)
         if not collision_record:
             return False
-        
-        chain1_target_id = chain1.get_target_id()
-        chain2_target_id = chain2.get_target_id()
-        
-        if chain1_target_id < chain2_target_id:
-            chain2.append_chain(chain1)
-            state.entity_list.remove(chain1)
-        else:
-            chain1.append_chain(chain2)
-            state.entity_list.remove(chain2)
 
+        if chain1.is_reversed():
+            print("Reversed chain collision")
+            if not self._do_chains_match(state, chain1, chain2):
+                print("Chains do not match")
+                state.combo_mult = 1
+                self._merge_chains(state, chain1, chain2)
+                return False
+            
+            print("Chains match")
+            match_count = 0
+            matches1 = []
+            matches2 = []
+            color = chain1.get_last_ball().color
+            print("      Color is", color)
+
+            index = len(chain1) - 1
+            while True:
+                ball = chain1.get_ball(index)
+                if ball is not None:
+                    print("      Ball", ball.get_label(), ball.color)
+                else:
+                    print("      Ball is None")
+                if ball is None or ball.color != color:
+                    break
+                match_count += 1
+                matches1.append(index)
+                index -= 1
+
+            index = 0
+            while True:
+                ball = chain2.get_ball(index)
+                if ball is not None:
+                    print("      Ball", ball.get_label(), ball.color)
+                else:
+                    print("      Ball is None")
+                if ball is None or ball.color != color:
+                    break
+                match_count += 1
+                matches2.append(index)
+                index += 1
+
+            if match_count < 3:     
+                print("Match count too low", match_count)      
+                self._merge_chains(state, chain1, chain2)
+            else:
+                print("Scoring match", match_count)
+                matches1.sort(reverse=True)
+                matches2.sort(reverse=True)
+
+                for index in matches1:
+                    chain1.remove_ball(index)
+                for index in matches2:
+                    chain2.remove_ball(index)
+
+                if len(chain1.data) == 0:
+                    state.entity_list.remove(chain1)
+                if len(chain2.data) == 0:
+                    state.entity_list.remove(chain2)
+
+                print("Scoring combo")
+                self.score_update(state, match_count, is_combo=True)
+        else:
+            if not (hasattr(chain1, 'shut_the_fuck_up') or hasattr(chain2, 'shut_the_fuck_up')):
+                print("Normal chain collision")
+            self._merge_chains(state, chain1, chain2)
         
         return False
+
+    def _merge_chains(self, state: ZoomaGameState, chain1: Chain, chain2: Chain):
+        chain1_distance = state.path.distance_between_point_and_position(-1, chain1.get_first_ball().position)
+        chain2_distance = state.path.distance_between_point_and_position(-1, chain2.get_first_ball().position)
         
+        if chain1_distance > chain2_distance:
+            chain1, chain2 = chain2, chain1
+
+        chain_1_speed = chain1.move_speed
+        chain_2_speed = chain2.move_speed
+
+        merging_chain = chain2
+        remaining_chain = chain1
+
+        if not (hasattr(merging_chain, 'shut_the_fuck_up') or hasattr(remaining_chain, 'shut_the_fuck_up')):
+            print(f"Append chain {merging_chain.id} to chain {remaining_chain.id}")
+        remaining_chain.append_chain(merging_chain)
+        state.entity_list.remove(merging_chain)
+        remaining_chain.move_speed = max(chain_1_speed, chain_2_speed)
+    
+    def score_update(self, state: ZoomaGameState, match_count: int, is_combo: bool = False, is_shot: bool = False):
+        if is_shot:
+            state.chain_count += 1
+        if is_combo:
+            state.combo_mult += 1
+
+        combo_mult = max(1, state.combo_mult)
+        chain_mult = max(1, state.chain_count - 3)
+        
+
+        score = match_count * 10 * combo_mult * chain_mult
+        state.score += score
+        state.progress_percent += score / 1500
+
+        score_message = f"+{score}"
+        if chain_mult > 1:
+            score_message += f" Chain x{chain_mult}"
+        if combo_mult > 1:
+            score_message += f" Combo x{combo_mult}"
+
+        state.last_message = score_message
+        print(f"Score: {score_message}")
+        
+        
+    def scan_chain_matches(self, state: ZoomaGameState):
+        chains = [entity for entity in state.entity_list if isinstance(entity, Chain)]
+
+        def chain_sort_key(chain: Chain):
+            return state.path.distance_between_point_and_position(-1, chain.get_first_ball().position)
+
+        chains.sort(key=chain_sort_key)
+
+        for i in range(len(chains) - 1):
+            chain1 = chains[i]
+            chain2 = chains[i + 1]
+            
+            if self._do_chains_match(state, chain1, chain2):
+                chain1.reverse(state.base_chain_speed * 3)
+
+    def _do_chains_match(self, state: ZoomaGameState, chain1: Chain, chain2: Chain):
+        chain1_distance = state.path.distance_between_point_and_position(-1, chain1.get_first_ball().position)
+        chain2_distance = state.path.distance_between_point_and_position(-1, chain2.get_first_ball().position)
+        
+        # Make chain 1 the chain closer to the death hole
+        if chain1_distance > chain2_distance:
+            chain1, chain2 = chain2, chain1
+        
+        a = chain1.get_last_ball()
+        b = chain2.get_first_ball()
+        
+        return a.color == b.color
 
     def updateDisplay(self, state: ZoomaGameState):
         """ all the draws of python objects should occur here"""
