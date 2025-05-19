@@ -26,7 +26,8 @@ clock = pygame.time.Clock()
 # Editor state
 class EditorState:
     def __init__(self):
-        self.paths = []  # List of paths
+        """Initialize editor state"""
+        self.paths = []
         self.current_path = Path([])
         self.drawing = False
         self.last_point = None
@@ -42,6 +43,9 @@ class EditorState:
         self.input_active_color = (80, 80, 80)
         self.input_inactive_color = (0, 255, 0)
         self.input_cancelled = False
+        self.turret_position = None
+        self.turret_radius = 40
+        self.placing_turret = False
 
     def add_path(self):
         """Add the current path to the list and start a new one"""
@@ -104,6 +108,12 @@ class EditorState:
                             data["paths"].append({
                                 "points": [[int(p.x), int(p.y)] for p in path.points]
                             })
+
+                    # Add turret position if it exists
+                    if self.turret_position:
+                        data["turret"] = {
+                            "position": [int(self.turret_position[0]), int(self.turret_position[1])]
+                        }
                     
                     # No need to add current_path again since it's already in paths list
                     
@@ -131,6 +141,13 @@ class EditorState:
                                     path.addPoint(point)
                                 if len(path.points) > 1:
                                     self.paths.append(path)
+
+                            # Load turret position if it exists
+                            turret_data = data.get("turret")
+                            if turret_data:
+                                self.turret_position = (turret_data["position"][0], turret_data["position"][1])
+                            else:
+                                self.turret_position = None
                             
                             self.current_path = Path([])
                             self.last_point = None
@@ -297,6 +314,10 @@ def main():
                             state.undo_last_points()
                         elif event.key == pygame.K_n:
                             state.add_path()
+                        elif event.key == pygame.K_f:
+                            state.placing_turret = not state.placing_turret
+                            if not state.placing_turret:
+                                state.turret_position = None
                         elif event.key == pygame.K_ESCAPE:
                             running = False
                 else:
@@ -313,13 +334,20 @@ def main():
                         state.undo_last_points()
                     elif event.key == pygame.K_n:
                         state.add_path()
+                    elif event.key == pygame.K_f:
+                        state.placing_turret = not state.placing_turret
+                        if not state.placing_turret:
+                            state.turret_position = None
                     elif event.key == pygame.K_ESCAPE:
                         running = False
             
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  # Left click
-                    state.drawing = True
-                    state.add_point(event.pos)
+                    if state.placing_turret:
+                        state.turret_position = event.pos
+                    else:
+                        state.drawing = True
+                        state.add_point(event.pos)
             
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 1:  # Left click
@@ -358,6 +386,15 @@ def main():
             for i, point in enumerate(state.current_path.points):
                 color = GREEN if i == 0 else RED if i == len(state.current_path.points) - 1 else BLUE
                 pygame.draw.circle(screen, color, point, 5)
+
+        # Draw turret preview
+        if state.placing_turret:
+            mouse_pos = pygame.mouse.get_pos()
+            pygame.draw.circle(screen, (128, 128, 128), mouse_pos, state.turret_radius, 2)
+        
+        # Draw saved turret
+        if state.turret_position:
+            pygame.draw.circle(screen, (128, 128, 128), state.turret_position, state.turret_radius)
 
         # Draw status text
         font = pygame.font.Font(None, 24)

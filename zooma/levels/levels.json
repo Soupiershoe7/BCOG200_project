@@ -1,0 +1,94 @@
+{
+    "levels": [
+        {
+            "name": "Level 1-1",
+            "map": "map-01.json",
+            "difficulty": 4
+        },
+        {
+            "name": "Level 1-2",
+            "map": "map-02.json",
+            "difficulty": 4
+        },
+        {
+            "name": "Level 1-3",
+            "map": "map-03.json",
+            "difficulty": 4
+        },
+        {
+            "name": "Level 1-4",
+            "map": "map-04.json",
+            "difficulty": 4
+        },
+        {
+            "name": "Level 1-5",
+            "map": "my_map-01.json",
+            "difficulty": 4
+        },
+        {
+            "name": "Level 1-6",
+            "map": "my_map-02.json",
+            "difficulty": 4
+        },
+        {
+            "name": "Level 2-1",
+            "map": "map-01.json",
+            "difficulty": 5
+        },
+        {
+            "name": "Level 2-2",
+            "map": "map-02.json",
+            "difficulty": 5
+        },
+        {
+            "name": "Level 2-3",
+            "map": "map-03.json",
+            "difficulty": 5
+        },
+        {
+            "name": "Level 2-4",
+            "map": "map-04.json",
+            "difficulty": 5
+        },
+        {
+            "name": "Level 2-5",
+            "map": "my_map-01.json",
+            "difficulty": 5
+        },
+        {
+            "name": "Level 2-6",
+            "map": "my_map-02.json",
+            "difficulty": 5
+        },
+        {
+            "name": "Level 3-1",
+            "map": "map-01.json",
+            "difficulty": 6
+        },
+        {
+            "name": "Level 3-2",
+            "map": "map-02.json",
+            "difficulty": 6
+        },
+        {
+            "name": "Level 3-3",
+            "map": "map-03.json",
+            "difficulty": 6
+        },
+        {
+            "name": "Level 3-4",
+            "map": "map-04.json",
+            "difficulty": 6
+        },
+        {
+            "name": "Level 3-5",
+            "map": "my_map-01.json",
+            "difficulty": 6
+        },
+        {
+            "name": "Level 3-6",
+            "map": "my_map-02.json",
+            "difficulty": 6
+        }
+    ]
+}
