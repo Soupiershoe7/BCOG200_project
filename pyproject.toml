@@ -9,7 +9,7 @@ description = "A Zuma clone game"
 authors = [
     { name = "Katarina Smith", email = "kms30@illinois.edu" }
 ]
-license = { text = "MIT" }
+license = "MIT"
 dependencies = [
     "pygame>=2.6.1",
 ]
@@ -17,3 +17,7 @@ requires-python = ">=3.8"
 
 [project.scripts]
 zooma = "zooma.main:main"
+zooma-editor = "zooma.editor:main"
+
+[tool.setuptools.package-data]
+zooma = ["levels/*", "sounds/*"]

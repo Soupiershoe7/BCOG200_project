@@ -167,7 +167,6 @@ Extra
        - crossing path (dot product inversion) attaches multiplier stat to ball
 
 is inserting push forward
-death hole kills
 saved maps
 
 

@@ -41,7 +41,31 @@ I've switched my project to making a game inspired by PopCap's Zuma game. As of 
 
 
 # ZUMA BCOG
-Complex ball movement
+
+## Level Editor
+
+The project includes a level editor tool (`zooma-editor`) that allows you to create custom levels for the game. The editor lets you:
+
+- Draw custom paths for the game
+- Save and load levels
+- Preview paths before playing
+- Create multiple paths in a single level
+
+To use the editor:
+1. Run `zooma-editor` from the command line
+2. Use the mouse to draw paths
+3. Press `S` to save the level
+4. Press `L` to load an existing level
+5. Press `C` to clear the current drawing
+6. Press `G` to toggle grid visibility
+7. Press `U` to undo the last points
+8. Press `N` to start a new path
+9. Press `ESC` to quit the editor
+
+## Game Controls
+
+- **Left Click**: Shoot a ball
+- **esc**: Quit/close the game.
 - balls slow down after being moved backwards
 - If any gap has the same color on either side, the line is pulled together
 - After balls are moved back, movement starts slowly and then speeds up
