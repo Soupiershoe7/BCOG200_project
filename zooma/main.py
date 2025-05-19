@@ -41,6 +41,7 @@ class ZoomaGameState:
         self.base_chain_speed = 0.5
         self.did_zooma = False
         self.game_over = False
+        self.level_complete = False
 
         self.difficulty = 6
         self.level_colors: LevelColors = LevelColors(self.difficulty)
@@ -114,6 +115,7 @@ class ZoomaGame:
             state.progress_percent = 0
             state.did_zooma = False
             state.last_message = ""
+            state.level_complete = False
 
             # Clear entities
             state.entity_list.clear()
@@ -163,6 +165,7 @@ class ZoomaGame:
         #add prompt
         state.paused = True
         state.last_message = "Level Complete!"
+        state.level_complete = True
         
     def advance_level(self, state: ZoomaGameState):
         state.paused = True
@@ -230,16 +233,20 @@ class ZoomaGame:
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 pressed_buttons = pygame.mouse.get_pressed()
                 if pressed_buttons[0]:
-                    self.shoot_ball(state)
+                    if state.level_complete:
+                        self.advance_level(state)
+                    else:
+                        self.shoot_ball(state)
+
             elif event.type == pygame.KEYDOWN:
                 # exit game
                 if event.key == K_ESCAPE:
                     pygame.quit()
                     sys.exit()
-                
-                # toggle draw mode
-                if event.key == K_d: 
-                    self.toggle_draw_mode(state)
+
+                elif event.key == K_RETURN:
+                    if state.level_complete:
+                        self.advance_level(state)
                 
                 # toggle pause
                 elif event.key == K_p: 
@@ -256,10 +263,6 @@ class ZoomaGame:
                 # reset game
                 elif event.key == K_r: 
                     self.reset_game(state)
-                
-                # split at i
-                elif event.key in (K_1, K_2, K_3, K_4, K_5, K_6, K_7, K_8, K_9): 
-                    self.split_chain(state, event.key)
 
                 # change chain speed
                 elif event.key in (K_0, K_MINUS, K_EQUALS):
@@ -675,7 +678,7 @@ class ZoomaGame:
 
         score = match_count * 10 * combo_mult * chain_mult
         state.score += score
-        state.progress_percent += score / 1500
+        state.progress_percent += score / 300
 
         score_message = f"+{score}"
         if chain_mult > 1:
@@ -721,19 +724,22 @@ class ZoomaGame:
         # clear the screen
         self.screen.fill(Color('black'))
 
-        self.draw_balls(state)
+        self.draw_entities(state)
         self.draw_status_display(state)
+
+        if state.level_complete:
+            self.draw_level_complete(state)
 
         # Update the display
         pygame.display.flip()
 
-    def draw_balls(self, state: ZoomaGameState):
-        # Draw all the balls
+    def draw_entities(self, state: ZoomaGameState):
+        # Draw all the entities
         for entity in state.entity_list:
             entity.draw(self.screen)
 
-    def draw_text(self, screen: pygame.Surface, text: str, pos: tuple[int, int], centered: bool = False, centered_x: bool = False):
-        text_surface = self.font.render(text, True, Color('white'))
+    def draw_text(self, screen: pygame.Surface, text: str, pos: tuple[int, int], color: Color = Color('white'), centered: bool = False, centered_x: bool = False):
+        text_surface = self.font.render(text, True, color)
         if centered:
             pos = (pos[0] - text_surface.get_width() / 2, pos[1] - text_surface.get_height() / 2)
         if centered_x:
@@ -767,7 +773,17 @@ class ZoomaGame:
             self.draw_text(self.screen, state.last_message, (center_x, 50), centered=True)
         self.draw_progress_bar(self.screen, state, (center_x + 100, 10))
 
-    
+    def draw_level_complete(self, state: ZoomaGameState):
+        dimensions = Vector2(500, 250)
+        center = Vector2(WIDTH / 2, HEIGHT / 2)
+        rect = pygame.Rect(center.x - dimensions.x / 2, center.y - dimensions.y / 2, dimensions.x, dimensions.y)
+
+        pygame.Surface.fill(self.screen, Color('#8e7c78'), rect)
+
+        self.draw_text(self.screen, "Level Complete", (center.x, center.y - 50), centered=True)
+        self.draw_text(self.screen, f"Score: {state.score}", (center.x, center.y), centered=True)
+        self.draw_text(self.screen, "Press Enter or click to continue", (center.x, center.y + 50), centered=True)
+        
 
 
 
