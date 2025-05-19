@@ -18,14 +18,17 @@ class Ball(Entity):
 
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, self.position, self.radius)
-        if hasattr(self, 'id'):
-            self.draw_text(screen, str(self.id), self.position)
+        label = self.get_label()
+        if label is not None:
+            self.draw_text(screen, label, self.position)
 
     def draw_text(self, screen: pygame.Surface, text: str, pos: Vector2):
         text_surface = self.font.render(text, True, Color('black'))
         text_rect = text_surface.get_rect(center=pos)
         screen.blit(text_surface, text_rect)
 
+    def get_label(self):
+        return f"{self.id}" if hasattr(self, 'id') else None
 
     def check_collision(self, other_ball):
         distance = self.position.distance_to(other_ball.position)
@@ -70,9 +73,14 @@ class ChainBall(Ball):
         self.speed = 2
         self.behind: ChainBall = None
         self.infront: ChainBall = None
+        self.chain_id = None
 
     def with_color(self, color):
         self.color = color
+        return self
+
+    def with_chain_id(self, chain_id):
+        self.chain_id = chain_id
         return self
 
     def append(self, ball: "ChainBall"):
@@ -81,30 +89,6 @@ class ChainBall(Ball):
         self.behind = ball
         ball.infront = self
         ball.set_target(self.position)
-
-    def update(self):
-        if self.infront:
-            goal_offset = self.infront.position - self.position
-            collision_range = self.radius + self.infront.radius
-        else:
-            # goal_offset = self.target - self.position
-            goal_offset = self.target - self.position
-            # goal_offset = (self.heading * self.speed)
-            collision_range = self.radius * 2
-
-        # how far away is goal
-        distance = goal_offset.length()
-
-        # where is goal
-        heading = goal_offset
-        if heading.length() != 0:
-            heading = heading.normalize()
-        
-        # how close can we go
-        max_distance = distance - collision_range
-
-        #move
-        self.position += heading * min(self.speed, max_distance)
 
     def check_collision(self, other_ball: Ball):
         distance = self.position.distance_to(other_ball.position)
@@ -115,6 +99,9 @@ class ChainBall(Ball):
             target = target.position
 
         self.target = target
+
+    def get_label(self):
+        return f"{self.chain_id}-{self.id}"
 
 if __name__ == "__main__":
     print("Don't be an idiot and run the ball")
