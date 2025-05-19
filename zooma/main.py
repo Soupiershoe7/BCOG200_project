@@ -150,7 +150,7 @@ class ZoomaGame:
     def task_emit_chain(self, state: ZoomaGameState):
         self.try_to_emit_chain(state)
 
-        if state.progress_percent >= 1:
+        if state.progress_percent >= 1 and not state.did_zooma:
             state.did_zooma = True
             self.zooma_sound.play()
 
@@ -167,15 +167,18 @@ class ZoomaGame:
                 if not emitter.is_active():
                     continue
 
+                can_emit = True
                 for entity in state.entity_list:
                     # emitter blocked
                     if isinstance(entity, Chain) and emitter.check_collision(entity):
-                        continue
+                        can_emit = False
+                        break
                 
-                new_ball = ChainBall(emitter.position, emitter.get_color())
-                chain = Chain(state.path, [new_ball])
-                chain.shut_the_fuck_up = True
-                state.entity_list.append(chain)
+                if can_emit:
+                    new_ball = ChainBall(emitter.position, emitter.get_color())
+                    chain = Chain(state.path, [new_ball])
+                    chain.shut_the_fuck_up = True
+                    state.entity_list.append(chain)
 
     def task_motivate_chains(self, state: ZoomaGameState):
         pusher_chain = None
