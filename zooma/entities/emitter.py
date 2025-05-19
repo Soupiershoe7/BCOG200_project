@@ -3,12 +3,14 @@ import pygame
 
 from zooma.entities.entity import Entity
 from zooma.entities.chain import Chain
+from zooma.entities.path import Path
 from zooma.utils.colors import LevelColors
 
 class Emitter (Entity):
-    def __init__(self, position: Vector2, level_colors: LevelColors):
+    def __init__(self, position: Vector2, path: Path, level_colors: LevelColors):
         super().__init__()
         self.position = Vector2(position)
+        self.path = path
         self.level_colors = level_colors
         self.color_generator = self.level_colors.get_color_generator()
         self.active = False

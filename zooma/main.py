@@ -22,10 +22,6 @@ class ZoomaGameState:
     def __init__(self):
         self.current_level = 0
         self.level_name = ""
-
-        self.hits = 0
-        self.shots = 0
-        self.spawns = 0
         self.score = 0
         self.progress_percent = 0
         self.chain_count = 0
@@ -36,12 +32,14 @@ class ZoomaGameState:
 
         self.paused = True
         self.draw_mode = False
-        self.path: Path = None
         self.last_message = ""
         self.base_chain_speed = 0.5
         self.did_zooma = False
         self.game_over = False
         self.level_complete = False
+        self.start_time = 0
+        self.game_start_boost_mult = 10
+        self.game_start_boost_time = 1500
 
         self.difficulty = 6
         self.level_colors: LevelColors = LevelColors(self.difficulty)
@@ -132,13 +130,12 @@ class ZoomaGame:
                     continue
 
                 path = Path(points)
-                state.path = path
                 state.entity_list.append(path)
 
                 start_point = points[0]
                 end_point = points[-1]
                 
-                emitter = Emitter(Vector2(start_point), state.level_colors)
+                emitter = Emitter(Vector2(start_point), path, state.level_colors)
                 state.entity_list.append(emitter)
 
                 death_hole = DeathHole(Vector2(end_point))
@@ -155,6 +152,7 @@ class ZoomaGame:
         return state
     
     def start_level(self, state: ZoomaGameState):
+        state.start_time = pygame.time.get_ticks()
         state.paused = False
         state.forg.reset()
         for entity in state.entity_list:
@@ -278,7 +276,6 @@ class ZoomaGame:
 
     def do_tasks(self, state: ZoomaGameState):
         self.task_check_win(state)
-        self.task_draw_mode(state)
         self.task_emit_chain(state)
         self.task_motivate_chains(state)
         self.task_check_colors(state)
@@ -295,22 +292,10 @@ class ZoomaGame:
         if ball_count == 0:
             self.end_level(state)
 
-    def task_draw_mode(self, state: ZoomaGameState):
-        # add points to drawing
-        if state.draw_mode:
-            new_point = pygame.mouse.get_pos()
-            
-            was_empty = len(state.path.points) == 0
-            state.path.addPoint(new_point)
-
-            # Creating first point in path
-            if was_empty:
-                emitter = Emitter(new_point, state.level_colors)
-                state.entity_list.append(emitter)
-
     def task_emit_chain(self, state: ZoomaGameState):
         self.try_to_emit_chain(state)
 
+        # See if progress is complete and stop emitters
         if state.progress_percent >= 1 and not state.did_zooma:
             state.did_zooma = True
             self.zooma_sound.play()
@@ -337,27 +322,36 @@ class ZoomaGame:
                 
                 if can_emit:
                     new_ball = ChainBall(emitter.position, emitter.get_color())
-                    chain = Chain(state.path, [new_ball])
+                    chain = Chain(emitter.path, [new_ball])
                     chain.shut_the_fuck_up = True
                     state.entity_list.append(chain)
 
+    # I got help from a tutor for functionality for multiple pushers
     def task_motivate_chains(self, state: ZoomaGameState):
-        pusher_chain = None
-        distance_to_start = float('inf')
+        path_distances = {}
+        path_pushers = {}
 
         for entity in state.entity_list:
             if isinstance(entity, Chain):
                 if state.game_over:
                     entity.move_speed = state.base_chain_speed * 10
+                # if current time is more than 3 seconds since start
+                # elif (pygame.time.get_ticks() - state.start_time) < state.game_start_boost_time:
+                #     entity.move_speed = state.base_chain_speed * state.game_start_boost_mult
+                # elif (pygame.time.get_ticks() - state.start_time) > state.game_start_boost_time:
+                #     entity.move_speed = state.base_chain_speed
                 else:
                     first_ball = entity.get_first_ball()
-                    d = state.path.distance_between_point_and_position(0, first_ball.position)
-                    if d < distance_to_start:
-                        distance_to_start = d
-                        pusher_chain = entity
+                    path = entity.path
+                    d = path.distance_between_point_and_position(0, first_ball.position)
+                    path_current_best_distance = path_distances.get(path, float('inf'))
+                    if d < path_current_best_distance:
+                        path_distances[path] = d
+                        path_pushers[path] = entity
         
-        if not state.game_over and pusher_chain is not None:
-            pusher_chain.move_speed = state.base_chain_speed
+        if not state.game_over:
+            for pusher in path_pushers.values():
+                pusher.move_speed = state.base_chain_speed
 
     def task_check_colors(self, state: ZoomaGameState):
         if not state.did_zooma:
@@ -411,51 +405,12 @@ class ZoomaGame:
         # Check for collisions
         self.check_collisions(state)
 
-    def _get_random_position(self, top_half_only: bool = False):
-        """ Get a random position on the screen """
-        rand_x = random.randint(20, WIDTH - 20)
-        if top_half_only:
-            rand_y = random.randint(20, HEIGHT // 2)
-        else:
-            rand_y = random.randint(20, HEIGHT - 20)
-
-        return Vector2(rand_x, rand_y)
-
-    def toggle_draw_mode(self, state: ZoomaGameState):
-        if state.draw_mode:
-            state.draw_mode = False
-
-            death_hole = DeathHole(state.path.points[-1])
-            state.entity_list.append(death_hole)
-
-            # Start game
-            state.paused = False
-        else:
-            state.draw_mode = True
-            state.paused = True
-            state.path.clear()
-
-            to_remove = []
-            # remove emitter and death hole
-            for entity in state.entity_list:
-                if isinstance(entity, DeathHole):
-                    to_remove.append(entity)
-                elif isinstance(entity, Emitter):
-                    to_remove.append(entity)
-            
-            for entity in to_remove:
-                state.entity_list.remove(entity)
-
-            self.reset_game(state)
-
     def shoot_ball(self, state: ZoomaGameState):
         """ Shoot the held ball """
         ball_just_shot = state.forg.shoot()
         if ball_just_shot is None:
             return
         state.entity_list.append(ball_just_shot)
-
-        state.shots += 1
 
     def swap_held_ball(self, state: ZoomaGameState): 
         state.forg.swap_ball()
@@ -648,8 +603,15 @@ class ZoomaGame:
         return False
 
     def _merge_chains(self, state: ZoomaGameState, chain1: Chain, chain2: Chain):
-        chain1_distance = state.path.distance_between_point_and_position(-1, chain1.get_first_ball().position)
-        chain2_distance = state.path.distance_between_point_and_position(-1, chain2.get_first_ball().position)
+        path1 = chain1.path
+        path2 = chain2.path
+        
+        if path1 != path2:
+            print("!!!! ERROR: Merging chains on different paths")
+            return
+        
+        chain1_distance = path1.distance_between_point_and_position(-1, chain1.get_first_ball().position)
+        chain2_distance = path2.distance_between_point_and_position(-1, chain2.get_first_ball().position)
         
         if chain1_distance > chain2_distance:
             chain1, chain2 = chain2, chain1
@@ -694,7 +656,8 @@ class ZoomaGame:
         chains = [entity for entity in state.entity_list if isinstance(entity, Chain)]
 
         def chain_sort_key(chain: Chain):
-            return state.path.distance_between_point_and_position(-1, chain.get_first_ball().position)
+            path = chain.path
+            return path.distance_between_point_and_position(-1, chain.get_first_ball().position)
 
         chains.sort(key=chain_sort_key)
 
@@ -704,10 +667,17 @@ class ZoomaGame:
             
             if self._do_chains_match(state, chain1, chain2):
                 chain1.reverse(state.base_chain_speed * 3)
-
+    
     def _do_chains_match(self, state: ZoomaGameState, chain1: Chain, chain2: Chain):
-        chain1_distance = state.path.distance_between_point_and_position(-1, chain1.get_first_ball().position)
-        chain2_distance = state.path.distance_between_point_and_position(-1, chain2.get_first_ball().position)
+        path1 = chain1.path
+        path2 = chain2.path
+        
+        if path1 != path2:
+            print("!!!! ERROR: Comparing chains on different paths")
+            return False
+        
+        chain1_distance = path1.distance_between_point_and_position(-1, chain1.get_first_ball().position)
+        chain2_distance = path2.distance_between_point_and_position(-1, chain2.get_first_ball().position)
         
         # Make chain 1 the chain closer to the death hole
         if chain1_distance > chain2_distance:
@@ -760,12 +730,7 @@ class ZoomaGame:
         pygame.draw.rect(screen, Color('green'), fill_rect)
     
     def draw_status_display(self, state: ZoomaGameState):
-        # Draw the score
-        if state.shots == 0:
-            accuracy = 0
-        else:
-            accuracy = state.hits / state.shots
-
+        
         center_x = WIDTH / 2
         self.draw_text(self.screen, f"Score: {state.score}", (center_x - 250, 10))
         self.draw_text(self.screen, state.level_name, (center_x, 10), centered_x=True)
@@ -774,6 +739,17 @@ class ZoomaGame:
         self.draw_progress_bar(self.screen, state, (center_x + 100, 10))
 
     def draw_level_complete(self, state: ZoomaGameState):
+        if state.level_name == "Level 3-6":
+            dimensions = Vector2(700, 350)
+            center = Vector2(WIDTH / 2, HEIGHT / 2)
+            rect = pygame.Rect(center.x - dimensions.x / 2, center.y - dimensions.y / 2, dimensions.x, dimensions.y)
+            pygame.Surface.fill(self.screen, Color('#8e7c78'), rect)
+            
+            self.draw_text(self.screen, "You win!", (center.x, center.y - 50), centered=True)
+            self.draw_text(self.screen, f"Final score: {state.score}", (center.x, center.y), centered=True)
+            self.draw_text(self.screen, "Press Escape to exit the game", (center.x, center.y + 50), centered=True)
+            return
+        
         dimensions = Vector2(500, 250)
         center = Vector2(WIDTH / 2, HEIGHT / 2)
         rect = pygame.Rect(center.x - dimensions.x / 2, center.y - dimensions.y / 2, dimensions.x, dimensions.y)

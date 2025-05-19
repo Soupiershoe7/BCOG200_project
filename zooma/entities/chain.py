@@ -62,11 +62,15 @@ class Chain(Entity):
         return len(self.data)
     
     def check_collision(self, entity: Entity) -> CollisionRecord | None:
+
         if isinstance(entity, Ball):
             for i, record in enumerate(self.data):
                 if record.ball.check_collision(entity):
                     return CollisionRecord(i, record.ball, entity)
         elif isinstance(entity, Chain):
+            if self.path != entity.path:
+                return None
+
             other_first = entity.data[0].ball
             other_last = entity.data[-1].ball
             my_first = self.data[0].ball
