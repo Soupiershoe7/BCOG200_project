@@ -28,8 +28,6 @@ class ZoomaGameState:
         self.combo_mult = 1
 
         self.entity_list = []
-        self.emitter: Emitter = None
-        self.death_hole: DeathHole = None
         self.forg: Forg = None
 
         self.paused = True
@@ -146,32 +144,38 @@ class ZoomaGame:
 
             # Creating first point in path
             if was_empty:
-                state.emitter = Emitter(new_point, state.level_colors)
-                state.entity_list.append(state.emitter)
+                emitter = Emitter(new_point, state.level_colors)
+                state.entity_list.append(emitter)
 
     def task_emit_chain(self, state: ZoomaGameState):
         self.try_to_emit_chain(state)
 
-        if state.emitter is not None and state.emitter.is_active() and state.progress_percent >= 1:
-            state.emitter.deactivate()
-            
-            self.zooma_sound.play()
+        if state.progress_percent >= 1:
             state.did_zooma = True
-            print("ZOOMA!")
+            self.zooma_sound.play()
+
+            # Disable emitters
+            for entity in state.entity_list:
+                if isinstance(entity, Emitter):
+                    entity.deactivate()
 
     def try_to_emit_chain(self, state: ZoomaGameState):
-        emitter = state.emitter
-        if emitter is None or not emitter.is_active():
-            return
-
         for entity in state.entity_list:
-            if isinstance(entity, Chain) and emitter.check_collision(entity):
-                return
-        
-        new_ball = ChainBall(emitter.position, emitter.get_color())
-        chain = Chain(state.path, [new_ball])
-        chain.shut_the_fuck_up = True
-        state.entity_list.append(chain)
+            if isinstance(entity, Emitter):
+                emitter = entity
+                
+                if not emitter.is_active():
+                    continue
+
+                for entity in state.entity_list:
+                    # emitter blocked
+                    if isinstance(entity, Chain) and emitter.check_collision(entity):
+                        continue
+                
+                new_ball = ChainBall(emitter.position, emitter.get_color())
+                chain = Chain(state.path, [new_ball])
+                chain.shut_the_fuck_up = True
+                state.entity_list.append(chain)
 
     def task_motivate_chains(self, state: ZoomaGameState):
         pusher_chain = None
@@ -241,8 +245,9 @@ class ZoomaGame:
         state.did_zooma = False
         state.level_colors.set_difficulty(4)
 
-        if state.emitter is not None:
-            state.emitter.activate()
+        for entity in state.entity_list:
+            if isinstance(entity, Emitter):
+                entity.activate()
 
 
     def updateEntities(self, state: ZoomaGameState):
@@ -272,8 +277,9 @@ class ZoomaGame:
     def toggle_draw_mode(self, state: ZoomaGameState):
         if state.draw_mode:
             state.draw_mode = False
-            state.death_hole = DeathHole(state.path.points[-1])
-            state.entity_list.append(state.death_hole)
+
+            death_hole = DeathHole(state.path.points[-1])
+            state.entity_list.append(death_hole)
 
             # Start game
             state.paused = False
@@ -281,13 +287,18 @@ class ZoomaGame:
             state.draw_mode = True
             state.paused = True
             state.path.clear()
-            # remove emitter
-            if state.emitter != None and state.emitter in state.entity_list:
-                state.entity_list.remove(state.emitter)
-                state.emitter = None
-            if state.death_hole != None and state.death_hole in state.entity_list:
-                state.entity_list.remove(state.death_hole)
-                state.death_hole = None
+
+            to_remove = []
+            # remove emitter and death hole
+            for entity in state.entity_list:
+                if isinstance(entity, DeathHole):
+                    to_remove.append(entity)
+                elif isinstance(entity, Emitter):
+                    to_remove.append(entity)
+            
+            for entity in to_remove:
+                state.entity_list.remove(entity)
+
             self.reset_game(state)
 
     def shootBall(self, state: ZoomaGameState):
