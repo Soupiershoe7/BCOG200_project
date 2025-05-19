@@ -213,7 +213,7 @@ class Chain(Entity):
 
     def _forward_push(self, index: int):
         for i in range(index, -1, -1):
-            self._updateBall(i)
+            self._update_ball(i)
 
     def update(self):
         # No update if no path
@@ -223,14 +223,14 @@ class Chain(Entity):
             leader = self.get_first_ball()
             # print("Forward Chain: ", leader.get_label(), " -> ", self.data[0].target_id)
             for i in range(len(self.data)):
-                self._updateBall(i)
+                self._update_ball(i)
         else:
             leader = self.get_last_ball()
             # print("Backward Chain: ", leader.get_label(), " -> ", self.data[-1].target_id)
             for i in range(len(self.data) - 1, -1, -1):
-                self._updateBall(i)
+                self._update_ball(i)
 
-    def _updateBall(self, index, speed: float = None):
+    def _update_ball(self, index, speed: float = None):
         collided = False
         # if given speed still exists and is small, return
         if speed and speed < 0.00001:
@@ -308,7 +308,7 @@ class Chain(Entity):
         remaining_movement = move_speed - movement_amount
         if remaining_movement > 0.001 and not collided and movement_amount > 0.001:
             # Try Again
-            self._updateBall(index, remaining_movement)
+            self._update_ball(index, remaining_movement)
 
     def _get_collision_distance(self, first_index: int, second_index: int) -> float:
         if first_index < 0 or first_index >= len(self.data):

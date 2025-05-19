@@ -79,13 +79,13 @@ class ZoomaGame:
         self.start_level(self.state)
 
         while True:
-            self.processInputs(self.state)
+            self.process_inputs(self.state)
 
-            self.doTasks(self.state)
+            self.do_tasks(self.state)
 
-            self.updateEntities(self.state)
+            self.update_entities(self.state)
 
-            self.updateDisplay(self.state)
+            self.update_display(self.state)
 
             # Currently capped at 120fps
             self.clock.tick(120) 
@@ -220,7 +220,7 @@ class ZoomaGame:
             if isinstance(entity, Emitter):
                 entity.activate()
 
-    def processInputs(self, state: ZoomaGameState):
+    def process_inputs(self, state: ZoomaGameState):
         """ Process user inputs """
         for event in pygame.event.get():
             # print(f"Got event: {event}")
@@ -230,7 +230,7 @@ class ZoomaGame:
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 pressed_buttons = pygame.mouse.get_pressed()
                 if pressed_buttons[0]:
-                    self.shootBall(state)
+                    self.shoot_ball(state)
             elif event.type == pygame.KEYDOWN:
                 # exit game
                 if event.key == K_ESCAPE:
@@ -273,7 +273,7 @@ class ZoomaGame:
         # Current ball always follows the mouse
         state.forg.set_heading(Vector2(pygame.mouse.get_pos()))
 
-    def doTasks(self, state: ZoomaGameState):
+    def do_tasks(self, state: ZoomaGameState):
         self.task_check_win(state)
         self.task_draw_mode(state)
         self.task_emit_chain(state)
@@ -394,7 +394,7 @@ class ZoomaGame:
             
 
 
-    def updateEntities(self, state: ZoomaGameState):
+    def update_entities(self, state: ZoomaGameState):
         if state.paused:
             return
 
@@ -403,12 +403,12 @@ class ZoomaGame:
             entity.update()
 
         # Cleanup out of bound balls
-        self.checkOutOfBounds(state)
+        self.check_out_of_bounds(state)
 
         # Check for collisions
-        self.checkCollisions(state)
+        self.check_collisions(state)
 
-    def _getRandomPosition(self, top_half_only: bool = False):
+    def _get_random_position(self, top_half_only: bool = False):
         """ Get a random position on the screen """
         rand_x = random.randint(20, WIDTH - 20)
         if top_half_only:
@@ -445,7 +445,7 @@ class ZoomaGame:
 
             self.reset_game(state)
 
-    def shootBall(self, state: ZoomaGameState):
+    def shoot_ball(self, state: ZoomaGameState):
         """ Shoot the held ball """
         ball_just_shot = state.forg.shoot()
         if ball_just_shot is None:
@@ -457,7 +457,7 @@ class ZoomaGame:
     def swap_held_ball(self, state: ZoomaGameState): 
         state.forg.swap_ball()
 
-    def checkOutOfBounds(self, state: ZoomaGameState):
+    def check_out_of_bounds(self, state: ZoomaGameState):
         """ Check for out of bound balls and remove from ball_list """
         def is_in_bounds(ball):
             return 0 < ball.position.x < WIDTH and 0 < ball.position.y < HEIGHT
@@ -469,7 +469,7 @@ class ZoomaGame:
                     state.entity_list.remove(entity)
                     state.chain_count = 0
 
-    def checkCollisions(self, state: ZoomaGameState):
+    def check_collisions(self, state: ZoomaGameState):
         """ Check for collisions between balls and targets """
         to_remove = set()
 
@@ -498,19 +498,19 @@ class ZoomaGame:
                         continue
 
                     if isinstance(entity, ShotBall) and isinstance(other, Chain):
-                        collision = self.checkShotBallCollision(state, entity, other)
+                        collision = self.check_shot_ball_collision(state, entity, other)
                         if collision:
                             to_remove.add(entity)
                             break
                         
                     elif isinstance(entity, Chain) and isinstance(other, Chain):
-                        collision = self.checkChainCollision(state, entity, other)
+                        collision = self.check_chain_collision(state, entity, other)
         
         for remove in to_remove:
             if remove in state.entity_list:
                 state.entity_list.remove(remove)
 
-    def checkShotBallCollision(self, state: ZoomaGameState, shot_ball: ShotBall, entity: Entity):
+    def check_shot_ball_collision(self, state: ZoomaGameState, shot_ball: ShotBall, entity: Entity):
         if isinstance(entity, Chain):
             collision_record = entity.check_collision(shot_ball)
             if not collision_record:
@@ -571,7 +571,7 @@ class ZoomaGame:
     
         return False
 
-    def checkChainCollision(self, state: ZoomaGameState, chain1: Chain, chain2: Chain):
+    def check_chain_collision(self, state: ZoomaGameState, chain1: Chain, chain2: Chain):
         collision_record = chain1.check_collision(chain2)
         if not collision_record:
             return False
@@ -715,19 +715,19 @@ class ZoomaGame:
         
         return a.color == b.color
 
-    def updateDisplay(self, state: ZoomaGameState):
+    def update_display(self, state: ZoomaGameState):
         """ all the draws of python objects should occur here"""
         
         # clear the screen
         self.screen.fill(Color('black'))
 
-        self.drawBalls(state)
-        self.drawStatusDisplay(state)
+        self.draw_balls(state)
+        self.draw_status_display(state)
 
         # Update the display
         pygame.display.flip()
 
-    def drawBalls(self, state: ZoomaGameState):
+    def draw_balls(self, state: ZoomaGameState):
         # Draw all the balls
         for entity in state.entity_list:
             entity.draw(self.screen)
@@ -753,7 +753,7 @@ class ZoomaGame:
         pygame.draw.rect(screen, Color('yellow'), bg_rect)
         pygame.draw.rect(screen, Color('green'), fill_rect)
     
-    def drawStatusDisplay(self, state: ZoomaGameState):
+    def draw_status_display(self, state: ZoomaGameState):
         # Draw the score
         if state.shots == 0:
             accuracy = 0
