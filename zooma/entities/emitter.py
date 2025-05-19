@@ -11,7 +11,7 @@ class Emitter (Entity):
         self.position = Vector2(position)
         self.level_colors = level_colors
         self.color_generator = self.level_colors.get_color_generator()
-        self.active = True
+        self.active = False
 
     def activate(self):
         self.active = True

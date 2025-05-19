@@ -288,7 +288,7 @@ class Chain(Entity):
                 # TODO: Figure out a cleaner way to push the ball that is in front of us
                 # but has already updated.
                 if prev_ball_insertion_record:
-                    print("TODO: Fix this stopped ball")
+                    # TODO: forward push should only push as much as we have collision
                     movement_amount = 0
                     self._forward_push(prev_ball_index)
                 #actual movement is handled in move section

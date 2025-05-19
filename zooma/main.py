@@ -1,3 +1,4 @@
+import json
 import pygame
 import random
 import sys
@@ -19,6 +20,9 @@ WIDTH, HEIGHT = 1000, 800
 
 class ZoomaGameState:
     def __init__(self):
+        self.current_level = 0
+        self.level_name = ""
+
         self.hits = 0
         self.shots = 0
         self.spawns = 0
@@ -45,6 +49,13 @@ class ZoomaGameState:
 class ZoomaGame:
     def __init__(self):
         """ Initialize game state"""
+
+        pygame.init()
+        pygame.font.init() #initialize the font module
+        pygame.mixer.init()
+
+        pygame.display.set_caption("Zooma (not quite deluxe)") #set the title of the window
+
         # Set up the display
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT)) #set the dimensions of the window
         #create a clock object to control the frame rate
@@ -52,33 +63,162 @@ class ZoomaGame:
 
         self.font = pygame.font.Font(None, 36) #set the font for the text
 
-        pygame.mixer.init()
         self.zooma_sound = pygame.mixer.Sound("zooma/sounds/zooma.wav")
+        self.data = None
+
+        self.state: ZoomaGameState = None
         
 
     def run(self):
         """ Run the game loop """
 
-        state = ZoomaGameState()
-        state.path = Path([])
-        state.entity_list.append(state.path)
+        self.init_game()
 
-        state.forg = Forg(Vector2(WIDTH / 2, HEIGHT / 2), state.level_colors)
-        state.entity_list.append(state.forg)
+        self.state = self.load_level(self.state.current_level, self.state)
 
-        self.reset_game(state)
+        self.start_level(self.state)
 
         while True:
-            self.processInputs(state)
+            self.processInputs(self.state)
 
-            self.doTasks(state)
+            self.doTasks(self.state)
 
-            self.updateEntities(state)
+            self.updateEntities(self.state)
 
-            self.updateDisplay(state)
+            self.updateDisplay(self.state)
 
-            # Currently capped at 60fps
+            # Currently capped at 120fps
             self.clock.tick(120) 
+
+    def init_game(self):
+        with open("zooma/levels/levels.json", "r") as f:
+            data = json.load(f)
+
+        self.data = data
+
+        self.state = ZoomaGameState()
+        
+    def load_level(self, level: int, state: ZoomaGameState) -> ZoomaGameState:
+        try:
+            level_data = self.data["levels"][level]
+
+            state.difficulty = level_data["difficulty"]
+            state.level_colors = LevelColors(state.difficulty)
+
+            state.level_name = level_data["name"]
+            
+            # Reset level data
+            state.paused = True
+            state.chain_count = 0
+            state.combo_mult = 1
+            state.progress_percent = 0
+            state.did_zooma = False
+            state.last_message = ""
+
+            # Clear entities
+            state.entity_list.clear()
+
+            # Load Level Entities
+            map_name = level_data["map"]
+            with open(f"zooma/levels/{map_name}", "r") as f:
+                map_data = json.load(f)
+
+            for path_obj in map_data["paths"]:
+                points = path_obj["points"]
+                if len(points) < 2:
+                    print("Level map has invalid path")
+                    continue
+
+                path = Path(points)
+                state.path = path
+                state.entity_list.append(path)
+
+                start_point = points[0]
+                end_point = points[-1]
+                
+                emitter = Emitter(Vector2(start_point), state.level_colors)
+                state.entity_list.append(emitter)
+
+                death_hole = DeathHole(Vector2(end_point))
+                state.entity_list.append(death_hole)
+
+            forg_data = map_data["turret"]
+            forg = Forg(Vector2(forg_data["position"]), state.level_colors)
+            state.forg = forg
+            state.entity_list.append(forg)
+        except Exception as e:
+            print(f"Failed to load level {level}: {e}")
+            return None
+        
+        return state
+    
+    def start_level(self, state: ZoomaGameState):
+        state.paused = False
+        state.forg.reset()
+        for entity in state.entity_list:
+            if isinstance(entity, Emitter):
+                entity.activate()
+
+    def end_level(self, state: ZoomaGameState):
+        #add prompt
+        state.paused = True
+        state.last_message = "Level Complete!"
+        
+    def advance_level(self, state: ZoomaGameState):
+        state.paused = True
+
+        next_level = state.current_level + 1
+
+        if next_level >= len(self.data["levels"]):
+            print("You win!")
+            return
+
+        print("Advancing to level", next_level + 1)
+        state.current_level += 1
+
+        self.state = self.load_level(state.current_level, state)
+
+        self.start_level(self.state)
+
+    def end_game(self, state: ZoomaGameState, failure: bool = False):
+        if state.game_over:
+            return
+        
+        state.game_over = True
+        print("Game Over")
+        # play a sound?
+
+        if failure:
+            # self.death_sound.play()
+            for entity in state.entity_list:
+                if isinstance(entity, Emitter):
+                    entity.deactivate()
+            state.forg.die()
+        else:
+            # self.win_sound.play()
+            self.end_level(state)
+
+    def reset_game(self, state: ZoomaGameState):
+        to_remove = []
+        for entity in state.entity_list:
+            if isinstance(entity, Chain):
+                to_remove.append(entity)
+        
+        for entity in to_remove:
+            state.entity_list.remove(entity)
+
+        state.score = 0
+        state.progress_percent = 0
+        state.chain_count = 0
+        state.combo_mult = 1
+        state.did_zooma = False
+        state.game_over = False
+        state.level_colors.set_difficulty(state.difficulty)
+        state.forg.reset()
+
+        for entity in state.entity_list:
+            if isinstance(entity, Emitter):
+                entity.activate()
 
     def processInputs(self, state: ZoomaGameState):
         """ Process user inputs """
@@ -105,6 +245,10 @@ class ZoomaGame:
                 elif event.key == K_p: 
                     state.paused = not state.paused
 
+                # advance level
+                elif event.key == K_n: 
+                    self.advance_level(state)
+
                 # swap held ball
                 elif event.key == K_SPACE: 
                     self.swap_held_ball(state)
@@ -130,10 +274,23 @@ class ZoomaGame:
         state.forg.set_heading(Vector2(pygame.mouse.get_pos()))
 
     def doTasks(self, state: ZoomaGameState):
+        self.task_check_win(state)
         self.task_draw_mode(state)
         self.task_emit_chain(state)
         self.task_motivate_chains(state)
         self.task_check_colors(state)
+
+    def task_check_win(self, state: ZoomaGameState):
+        if not state.did_zooma:
+            return
+
+        ball_count = 0
+        for entity in state.entity_list:
+            if isinstance(entity, Chain):
+                ball_count += len(entity.data)
+
+        if ball_count == 0:
+            self.end_level(state)
 
     def task_draw_mode(self, state: ZoomaGameState):
         # add points to drawing
@@ -235,46 +392,6 @@ class ZoomaGame:
             print("special split move speed lost motivations", first_chain.get_first_ball().id)
             first_chain.move_speed = 0
             
-
-    def end_game(self, state: ZoomaGameState, failure: bool = False):
-        if state.game_over:
-            return
-        
-        state.game_over = True
-        print("Game Over")
-        # play a sound?
-
-        if failure:
-            # self.death_sound.play()
-            for entity in state.entity_list:
-                if isinstance(entity, Emitter):
-                    entity.deactivate()
-            state.forg.die()
-        else:
-            # self.win_sound.play()
-            pass
-
-    def reset_game(self, state: ZoomaGameState):
-        to_remove = []
-        for entity in state.entity_list:
-            if isinstance(entity, Chain):
-                to_remove.append(entity)
-        
-        for entity in to_remove:
-            state.entity_list.remove(entity)
-
-        state.score = 0
-        state.progress_percent = 0
-        state.chain_count = 0
-        state.combo_mult = 1
-        state.did_zooma = False
-        state.game_over = False
-        state.level_colors.set_difficulty(state.difficulty)
-        state.forg.reset()
-
-        for entity in state.entity_list:
-            if isinstance(entity, Emitter):
-                entity.activate()
 
 
     def updateEntities(self, state: ZoomaGameState):
@@ -615,10 +732,12 @@ class ZoomaGame:
         for entity in state.entity_list:
             entity.draw(self.screen)
 
-    def draw_text(self, screen: pygame.Surface, text: str, pos: tuple[int, int], centered: bool = False):
+    def draw_text(self, screen: pygame.Surface, text: str, pos: tuple[int, int], centered: bool = False, centered_x: bool = False):
         text_surface = self.font.render(text, True, Color('white'))
         if centered:
             pos = (pos[0] - text_surface.get_width() / 2, pos[1] - text_surface.get_height() / 2)
+        if centered_x:
+            pos = (pos[0] - text_surface.get_width() / 2, pos[1])
         screen.blit(text_surface, pos)
 
     def draw_progress_bar(self, screen: pygame.Surface, state: ZoomaGameState, pos: tuple[int, int]):
@@ -642,25 +761,17 @@ class ZoomaGame:
             accuracy = state.hits / state.shots
 
         center_x = WIDTH / 2
-        self.draw_text(self.screen, f"Score: {state.score}", (center_x - 200, 10))
+        self.draw_text(self.screen, f"Score: {state.score}", (center_x - 250, 10))
+        self.draw_text(self.screen, state.level_name, (center_x, 10), centered_x=True)
         if state.last_message:
             self.draw_text(self.screen, state.last_message, (center_x, 50), centered=True)
-        self.draw_progress_bar(self.screen, state, (center_x + 50, 10))
+        self.draw_progress_bar(self.screen, state, (center_x + 100, 10))
 
     
 
 
 
 def main():
-
-    pygame.init()
-    pygame.font.init() #initialize the font module
-
-    pygame.display.set_caption("Simple Pygame Window") #set the title of the window
-
-
-    print("Welcome to Zooma! This is a Zuma clone game.")
-
     game = ZoomaGame()
     game.run()
 
