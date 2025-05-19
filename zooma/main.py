@@ -38,7 +38,8 @@ class ZoomaGameState:
         self.did_zooma = False
         self.game_over = False
 
-        self.level_colors: LevelColors = LevelColors(4)
+        self.difficulty = 6
+        self.level_colors: LevelColors = LevelColors(self.difficulty)
 
 
 class ZoomaGame:
@@ -268,7 +269,7 @@ class ZoomaGame:
         state.combo_mult = 1
         state.did_zooma = False
         state.game_over = False
-        state.level_colors.set_difficulty(4)
+        state.level_colors.set_difficulty(state.difficulty)
         state.forg.reset()
 
         for entity in state.entity_list:
