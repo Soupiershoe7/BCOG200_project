@@ -37,6 +37,7 @@ class ZoomaGameState:
         self.path: Path = None
         self.last_message = ""
         self.base_chain_speed = 0.5
+        self.did_zooma = False
 
         self.level_colors: LevelColors = LevelColors(4)
 
@@ -133,6 +134,7 @@ class ZoomaGame:
         self.task_draw_mode(state)
         self.task_emit_chain(state)
         self.task_motivate_chains(state)
+        self.task_check_colors(state)
 
     def task_draw_mode(self, state: ZoomaGameState):
         # add points to drawing
@@ -154,6 +156,7 @@ class ZoomaGame:
             state.emitter.deactivate()
             
             self.zooma_sound.play()
+            state.did_zooma = True
             print("ZOOMA!")
 
     def try_to_emit_chain(self, state: ZoomaGameState):
@@ -185,6 +188,22 @@ class ZoomaGame:
         if pusher_chain is not None:
             pusher_chain.move_speed = state.base_chain_speed
 
+    def task_check_colors(self, state: ZoomaGameState):
+        if not state.did_zooma:
+            return
+
+        colors = set()
+        for entity in state.entity_list:
+            if isinstance(entity, Chain):
+                chain = entity
+                for i in range(len(chain)):
+                    ball = chain.get_ball(i)
+                    if ball:
+                        color_tuple = tuple(ball.color)
+                        colors.add(color_tuple)
+
+        if len(colors) > 0:
+            state.level_colors.set_colors([Color(c) for c in colors])
 
     def split_chain(self, state: ZoomaGameState, key: int):
         index = key - K_1 + 1
@@ -219,6 +238,8 @@ class ZoomaGame:
         state.progress_percent = 0
         state.chain_count = 0
         state.combo_mult = 1
+        state.did_zooma = False
+        state.level_colors.set_difficulty(4)
 
         if state.emitter is not None:
             state.emitter.activate()

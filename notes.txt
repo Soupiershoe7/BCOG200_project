@@ -168,7 +168,6 @@ Extra
 
 is inserting push forward
 death hole kills
-only active colors
 saved maps
 
 

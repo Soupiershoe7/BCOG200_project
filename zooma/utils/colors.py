@@ -16,6 +16,8 @@ DEFAULT_COLORS = [
     Color('green'),
     Color('blue'),
     Color('yellow'),
+    Color('purple'),
+    Color('white')
 ]
 
 class LevelColors:
@@ -25,6 +27,15 @@ class LevelColors:
 
     def get_color(self):
         return random.choice(self.colors)
+
+    def set_colors(self, colors: list[Color]):
+        self.colors = colors
+
+    def set_difficulty(self, difficulty: int):
+        self.colors = DEFAULT_COLORS[:difficulty]
+
+    def is_valid_color(self, color: Color):
+        return color in self.colors
         
     def get_color_generator(self):
         last_color = None

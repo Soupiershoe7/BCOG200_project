@@ -59,6 +59,12 @@ class Forg(Entity):
         current_time = pygame.time.get_ticks()
         if self.reserve_ball is None:
             self.reserve_ball = HeldBall(self.level_colors.get_color())
+
+        if not self.level_colors.is_valid_color(self.reserve_ball.color):
+            self.reserve_ball.color = self.level_colors.get_color()
+
+        if self.held_ball is not None and not self.level_colors.is_valid_color(self.held_ball.color):
+            self.held_ball.color = self.level_colors.get_color()
         
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, self.position, self.radius)
