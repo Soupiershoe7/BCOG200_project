@@ -125,7 +125,6 @@ class ZoomaGame:
                     elif event.key == K_EQUALS:
                         state.base_chain_speed += 0.05
 
-
         # Current ball always follows the mouse
         state.forg.set_heading(Vector2(pygame.mouse.get_pos()))
 
