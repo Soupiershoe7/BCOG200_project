@@ -56,6 +56,8 @@ class Chain(Entity):
                 record.ball.with_chain_id(self.id)
             self.data.append(record)
 
+        self.pending_insertions: list[InsertionRecord] = []
+
     def __len__(self):
         return len(self.data)
     
@@ -163,6 +165,7 @@ class Chain(Entity):
         ball = ball.with_id(id).with_chain_id(self.id)
         new_record = BallRecord(ball, insertion_record.target_id)
         self.data.insert(insertion_record.index, new_record)
+        self.pending_insertions.append(insertion_record)
 
     def append_chain(self, chain: "Chain"):
         global append_id
@@ -188,6 +191,29 @@ class Chain(Entity):
     def draw(self, screen):
         for record in self.data:
             record.ball.draw(screen)
+
+
+    def _is_pushed_by_insertion_record(self, index: int) -> bool:
+        for record in self.pending_insertions:
+            if record.index > index:
+                return True
+        return False
+
+    def _get_insertion_record(self, index: int) -> InsertionRecord | None:
+        for record in self.pending_insertions:
+            if record.index == index:
+                return record
+        return None
+
+    def _delete_insertion_record(self, index: int):
+        for i, record in enumerate(self.pending_insertions):
+            if record.index == index:
+                self.pending_insertions.pop(i)
+                return
+
+    def _forward_push(self, index: int):
+        for i in range(index, -1, -1):
+            self._updateBall(i)
 
     def update(self):
         # No update if no path
@@ -224,6 +250,9 @@ class Chain(Entity):
             gap = self._get_distance_between_ball(previous_ball_index, index)
             bonus_speed = gap * 0.001
 
+        if self._is_pushed_by_insertion_record(index):
+            bonus_speed += .1
+
         #allow behind balls to catch up to the ball in front of them
         if speed is not None:
             move_speed = speed
@@ -245,18 +274,23 @@ class Chain(Entity):
         prev_ball_index = index - 1 if not is_reversing else index + 1
 
         if has_prev_ball: # If there is a ball in front
-            other_ball = self.data[prev_ball_index].ball
-            combined_radius = ball.radius + other_ball.radius
+            prev_ball_insertion_record = self._get_insertion_record(prev_ball_index)
+            prev_ball = self.data[prev_ball_index].ball
 
-            vector_to_other_ball = other_ball.position - ball.position
-            distance_to_other_ball = vector_to_other_ball.length()
-            distance_until_collision = distance_to_other_ball - combined_radius
+            distance_until_collision = self._get_collision_distance(index, prev_ball_index)
             
             #we are colliding
-            if distance_to_other_ball < combined_radius:
-                heading = to_heading(vector_to_other_ball)
+            if distance_until_collision < 0:
+                heading = to_heading(prev_ball.position - ball.position)
                 collided = True
                 movement_amount = distance_until_collision #is negative in this case
+                # The previous ball is inserting, we'll wait here
+                # TODO: Figure out a cleaner way to push the ball that is in front of us
+                # but has already updated.
+                if prev_ball_insertion_record:
+                    print("TODO: Fix this stopped ball")
+                    movement_amount = 0
+                    self._forward_push(prev_ball_index)
                 #actual movement is handled in move section
             else:
                 movement_amount = min(movement_amount, distance_until_collision)
@@ -276,8 +310,23 @@ class Chain(Entity):
             # Try Again
             self._updateBall(index, remaining_movement)
 
+    def _get_collision_distance(self, first_index: int, second_index: int) -> float:
+        first_record = self.data[first_index]
+        second_record = self.data[second_index]
+
+        first_ball = first_record.ball
+        second_ball = second_record.ball
+
+        return first_ball.position.distance_to(second_ball.position) - first_ball.radius - second_ball.radius
+
     def _advanceTarget(self, index: int):
         record = self.data[index]
+        
+        insertion_record = self._get_insertion_record(index)
+        if insertion_record:
+            follower_index = index + 1 if self.move_speed >= 0 else index - 1
+            if self._get_collision_distance(index, follower_index) > 0:
+                self._delete_insertion_record(index)
 
         has_prev_ball = index > 0 if self.move_speed >= 0 else index < len(self.data) - 1
         prev_ball_index = index - 1 if self.move_speed >= 0 else index + 1

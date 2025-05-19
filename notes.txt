@@ -167,7 +167,7 @@ Extra
        - crossing path (dot product inversion) attaches multiplier stat to ball
 
 is inserting push forward
-saved maps
+load maps
 
 
 Level Data - List[Levels]

@@ -42,6 +42,21 @@ I've switched my project to making a game inspired by PopCap's Zuma game. As of 
 
 # ZUMA BCOG
 
+## Running the Game
+
+To run the game and level editor, you must be in the top-level project directory (`BCOG200_project`). This is because the game loads resources from the `zooma/sounds` and `zooma/levels` directories, which are relative to the project root.
+
+```bash
+# Navigate to the project root directory
+cd BCOG200_project
+
+# Run the game
+zooma
+
+# Run the level editor
+zooma-editor
+```
+
 ## Level Editor
 
 The project includes a level editor tool (`zooma-editor`) that allows you to create custom levels for the game. The editor lets you:

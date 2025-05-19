@@ -52,7 +52,7 @@ class ZoomaGame:
         self.font = pygame.font.Font(None, 36) #set the font for the text
 
         pygame.mixer.init()
-        self.zooma_sound = pygame.mixer.Sound("sounds/zooma.wav")
+        self.zooma_sound = pygame.mixer.Sound("zooma/sounds/zooma.wav")
         
 
     def run(self):
