@@ -384,6 +384,8 @@ class ZoomaGame:
                         collision = self.checkShotBallCollision(state, entity, other)
                         if collision:
                             to_remove.add(entity)
+                            break
+                        
                     elif isinstance(entity, Chain) and isinstance(other, Chain):
                         collision = self.checkChainCollision(state, entity, other)
         
