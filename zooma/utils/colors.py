@@ -12,12 +12,12 @@ def rainbow():
         hue = (hue + step) % 360
 
 DEFAULT_COLORS = [
-    Color('red'),
-    Color('green'),
-    Color('blue'),
-    Color('yellow'),
-    Color('purple'),
-    Color('white')
+    Color('DarkRed'),
+    Color('ForestGreen'),
+    Color('MediumBlue'),
+    Color('Gold'),
+    Color('#663399'),
+    Color('Gainsboro')
 ]
 
 class LevelColors:
