@@ -1,6 +1,8 @@
 from pygame.color import Color
 import random
 
+# generates colors for the game
+
 def rainbow():
     """Yields a sequence of colors cycling through the hue spectrum."""
     hue = 0
