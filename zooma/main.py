@@ -662,13 +662,7 @@ def main():
     print("Welcome to Zooma! This is a Zuma clone game.")
 
     game = ZoomaGame()
-    game.run()    
-    while True:
-        checkInputs()
-        updateObjects()
-        drawObjects()
-        flip()
-        tick()
+    game.run()
 
 if __name__ == "__main__":
     main()
