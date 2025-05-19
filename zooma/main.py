@@ -36,6 +36,7 @@ class ZoomaGameState:
         self.last_message = ""
         self.base_chain_speed = 0.5
         self.did_zooma = False
+        self.game_over = False
 
         self.level_colors: LevelColors = LevelColors(4)
 
@@ -186,13 +187,16 @@ class ZoomaGame:
 
         for entity in state.entity_list:
             if isinstance(entity, Chain):
-                first_ball = entity.get_first_ball()
-                d = state.path.distance_between_point_and_position(0, first_ball.position)
-                if d < distance_to_start:
-                    distance_to_start = d
-                    pusher_chain = entity
+                if state.game_over:
+                    entity.move_speed = state.base_chain_speed * 10
+                else:
+                    first_ball = entity.get_first_ball()
+                    d = state.path.distance_between_point_and_position(0, first_ball.position)
+                    if d < distance_to_start:
+                        distance_to_start = d
+                        pusher_chain = entity
         
-        if pusher_chain is not None:
+        if not state.game_over and pusher_chain is not None:
             pusher_chain.move_speed = state.base_chain_speed
 
     def task_check_colors(self, state: ZoomaGameState):
@@ -232,6 +236,24 @@ class ZoomaGame:
             first_chain.move_speed = 0
             
 
+    def end_game(self, state: ZoomaGameState, failure: bool = False):
+        if state.game_over:
+            return
+        
+        state.game_over = True
+        print("Game Over")
+        # play a sound?
+
+        if failure:
+            # self.death_sound.play()
+            for entity in state.entity_list:
+                if isinstance(entity, Emitter):
+                    entity.deactivate()
+            state.forg.die()
+        else:
+            # self.win_sound.play()
+            pass
+
     def reset_game(self, state: ZoomaGameState):
         to_remove = []
         for entity in state.entity_list:
@@ -246,7 +268,9 @@ class ZoomaGame:
         state.chain_count = 0
         state.combo_mult = 1
         state.did_zooma = False
+        state.game_over = False
         state.level_colors.set_difficulty(4)
+        state.forg.reset()
 
         for entity in state.entity_list:
             if isinstance(entity, Emitter):
@@ -340,6 +364,9 @@ class ZoomaGame:
                         other.remove_ball(0)
                         if len(other.data) == 0:
                             to_remove.add(other)
+
+                        if not state.game_over:
+                            self.end_game(state, failure=True)
 
         for remove in to_remove:
             if remove in state.entity_list:

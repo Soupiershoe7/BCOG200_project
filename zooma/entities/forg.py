@@ -1,12 +1,13 @@
 from pygame import Vector2, Color
 import pygame
-import time
+import math
 
 from zooma.entities.entity import Entity
 from zooma.entities.ball import Ball, ShotBall, HeldBall
 from zooma.utils.colors import LevelColors
 
 SHOOT_COOLDOWN = 500  # in ms
+DEATH_ANIMATION_TIME = 3000
 
 class Forg(Entity):
     def __init__(self, position: Vector2, colors: LevelColors):
@@ -22,17 +23,16 @@ class Forg(Entity):
 
         self.heading = Vector2(1,0)
         self.last_shot_time = 0
+
+        self.is_dead = False
+        self.time_of_death = 0
         
     def _get_held_position(self):
         return Vector2(self.position) + self.heading * self.radius
 
-    def hold(self, ball: Ball):
-        self.held_ball = ball
-
-    def reserve(self, ball: Ball):
-        self.reserve_ball = ball
-
     def set_heading(self, position: Vector2):
+        if self.is_dead:
+            return
         position = Vector2(position)
         self.heading = (position - self.position).normalize()
 
@@ -40,6 +40,9 @@ class Forg(Entity):
         self.held_ball, self.reserve_ball = self.reserve_ball, self.held_ball
 
     def shoot(self):
+        if self.is_dead:
+            return None
+        
         current_time = pygame.time.get_ticks()
         if self.held_ball is None or current_time - self.last_shot_time < SHOOT_COOLDOWN:
             return None
@@ -52,7 +55,26 @@ class Forg(Entity):
 
         return shot_ball
 
+    def die(self):
+        self.is_dead = True
+        self.time_of_death = pygame.time.get_ticks()
+
+    def reset(self):
+        self.is_dead = False
+        self.time_of_death = 0
+
     def update(self):
+        if self.is_dead:
+            # get angle from heading
+            angle = math.degrees(math.atan2(self.heading.y, self.heading.x))
+            spin_rate = 1440 / 60
+            elapsed_time = pygame.time.get_ticks() - self.time_of_death
+            animation_progress = min(1, elapsed_time / DEATH_ANIMATION_TIME)
+            easing_progress = (1 - (1 - animation_progress) ** 3)
+            angle += max(0, spin_rate - (spin_rate * easing_progress))
+            self.heading = Vector2(math.cos(math.radians(angle)), math.sin(math.radians(angle)))
+            return
+        
         if self.held_ball is None and self.reserve_ball is not None:
             self.swap_ball()
         
@@ -74,7 +96,6 @@ class Forg(Entity):
             self.held_ball.draw(screen)
 
         if self.reserve_ball:
-            self.reserve_ball.set_position(self.position)
-            self.reserve_ball.draw(screen)
+            pygame.draw.circle(screen, self.reserve_ball.color, self.position, 8)
             
         
