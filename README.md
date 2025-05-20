@@ -17,6 +17,19 @@
    python -m zooma
    ```
 
+   or run the executable installed in the venv bin directory.
+
+   ```sh
+   zooma
+   ```
+
+  To run the level editor, use the following command:
+   ```sh
+   zooma-editor
+   ```
+
+   Note the program should be run from the project root directory so that resources are loaded correctly.
+
 ## Running the Game
 
 To run the game and level editor, you must be in the top-level project directory (`BCOG200_project`). This is because the game loads resources from the `zooma/sounds` and `zooma/levels` directories, which are relative to the project root.
