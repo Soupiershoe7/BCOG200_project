@@ -1,7 +1,5 @@
-# BCOG200_project
-Repository for my BCOG 200 final project
-
-# Installation
+# Zooma Game
+## Installation
 
 1. Create and activate a Python virtual environment (recommended):
    ```sh
@@ -19,29 +17,6 @@ Repository for my BCOG 200 final project
    python -m zooma
    ```
 
-# Instructions
-
-Work in progress.  Draw a path for the zooma balls to follow.  Still to be done, shooting balls into chain, splitting chain, scoring, etc..
-
-## Controls
-
-- **p**: Toggle draw mode to draw a path with your mouse.
-- **a**: Append a new ball to the chain at the mouse position.
-- **space**: Pause or resume the game.
-- **esc**: Quit/close the game.
-
-
-# Project Check-In 4/21/25
-Most recently, I created ball_game.py which is a game that spawns target balls and you shoot at them by clicking the mouse which creates a ball at the location of the mouse, moving upwards. I did some work on collisions and scores, so I have a little bit of a better idea of how different parts of a pygame program work together. I used copilot to incrementally build ball_game.py and understand each step of the process.
-
-test.py is an exploratory program created by my dad who is tutoring me throughout the project.
-
-# Project Check-In 4/6/25
-I've switched my project to making a game inspired by PopCap's Zuma game. As of 4/6/25 this week I spent time looking at the details of the game and figuring out what the mechanics are. Then I discussed which mechanics are integral to the game, and which ones I can look at later on. 
-
-
-# ZUMA BCOG
-
 ## Running the Game
 
 To run the game and level editor, you must be in the top-level project directory (`BCOG200_project`). This is because the game loads resources from the `zooma/sounds` and `zooma/levels` directories, which are relative to the project root.
@@ -56,36 +31,103 @@ zooma
 # Run the level editor
 zooma-editor
 ```
+## Controls
 
-## Level Editor
+- **Left Click**: Shoot ball
+- **Space**: Swap held ball
+- **P**: Toggle pause
+- **ESC**: Quit game
+
+For debugging purposes/ testing:
+- **N**: Advance to next level
+- **R**: Reset level
+- **0, -, +**: Adjust chain speed
+
+# Game Narrative and intended functions
+
+Point and click to shoot a ball at the chain of balls. Match 3 or more of the same color to eliminate them.
+The balls will continue to be pushed forward, but if they reach the end, the game is over. Any balls that are not connected to the end of the chain lose movement until the back of the chain catches up to them. Any time you successfully eliminate a group of 3 or more balls and the remaining balls on either end of the gap are the same color, the front of the chain will move backwards to close the gap. If the closure results in a match of 3 or more balls, they will break, allowing for a cascade of eliminations. Break all the balls to end the level.
+
+## Game Progression
+There are three stages with the same six levels each. Stage 2 adds a fifth color, stage 3 adds a sixth color.
+The levels were created using the level editor (`zooma-editor`) which was created primarily by Windsurf AI and then debugged.
+
+## Chain Multiplier
+The chain multiplier increases for each consecutive shot that eliminates 3 or more balls of the same color. If a ball is shot off screen or inserted into the chain, the chain multiplier is reset to 1. The chain multiplier only takes effect after five consecutive shots (e.g. 5=2x, 6=3x, 7=4x, etc.)
+
+## Combo Multiplier
+When a gap is closed resulting in a matched set of 3 or more balls, they automatically break and the combo multiplier is increased. The combo multiplier is reset after the balls are done breaking.
+
+## Progress Bar
+The progress bar is a visual representation of the player's progress through the level. It is a horizontal bar that fills up as the player scores points. After scoring 1500 points in a single level, the progress bar will be filled to 100% and no more balls will be generated. 
+
+## The Turret
+The turret displays the current ball as well as the next color. The small circle represents the next ball. Pressing space will swap the current ball with the next ball. The turret is stationary and always aims in the direction of the mouse. There is a small delay between shots to prevent spamming. The turret will load a random color ball from the colors available in the level. After the progress bar is filled, the turret will load a ball with a random color from the balls currently on the chain. If the last ball of a color is eliminated, but the current or next ball is that color, the turret will automatically load a ball of an available color.
+
+## Ball Generation
+The emitter will continue to generate balls until the progress bar is filled to 100%. Balls are generated in clumps of one to three balls of the same color. The color is randomly selected from the colors available in the level.
+
+## The "Death Hole"
+At the end of the chain is a "Death Hole". If the chain of balls reaches the end of the path, the emitter will stop generating balls. The game is over and controls are locked. The remaining balls will be swallowed by the hole. 
+
+
+## Future Work
+A few mechanical details of the game are not yet implemented. These include:
+- Lives
+- Powerups
+- Gap shot bonus
+  - Based on gap size
+- Coin bonus
+- Reverse movement at 100% progress
+  - should remove any balls that reverse off the back of the path
+
+Additionally, I would like to add:
+- Sound effects
+- Art assets
+- More maps
+- More polished movement
+- Menus
+
+
+# Level Editor
+The level editor and the description below were primarily generated by Windsurf AI.
 
 The project includes a level editor tool (`zooma-editor`) that allows you to create custom levels for the game. The editor lets you:
 
-- Draw custom paths for the game
+- Draw custom levels for the game
 - Save and load levels
-- Preview paths before playing
 - Create multiple paths in a single level
+- Place turrets on the map
 
 To use the editor:
 1. Run `zooma-editor` from the command line
 2. Use the mouse to draw paths
-3. Press `S` to save the level
-4. Press `L` to load an existing level
-5. Press `C` to clear the current drawing
-6. Press `G` to toggle grid visibility
-7. Press `U` to undo the last points
-8. Press `N` to start a new path
-9. Press `ESC` to quit the editor
+   - **Left Click**: Draw path points or place turret
+   - **F**: Toggle turret placement mode
+   - **S**: Save the current level
+   - **L**: Load an existing level
+   - **C**: Clear the current drawing
+   - **G**: Toggle grid visibility
+   - **U**: Undo the last points
+   - **N**: Start a new path
+   - **ESC**: Quit the editor
 
-## Game Controls
+Levels are saved in the `zooma/levels` directory.
 
-- **Left Click**: Shoot a ball
-- **esc**: Quit/close the game.
+## Project Updates
+### Project Check-In 4/21/25
+Most recently, I created ball_game.py which is a game that spawns target balls and you shoot at them by clicking the mouse which creates a ball at the location of the mouse, moving upwards. I did some work on collisions and scores, so I have a little bit of a better idea of how different parts of a pygame program work together. I used copilot to incrementally build ball_game.py and understand each step of the process.
+
+test.py is an exploratory program created by my dad who is tutoring me throughout the project.
+
+### Project Check-In 4/6/25
+I've switched my project to making a game inspired by PopCap's Zuma game. As of 4/6/25 this week I spent time looking at the details of the game and figuring out what the mechanics are. Then I discussed which mechanics are integral to the game, and which ones I can look at later on. 
+
+## Notes
 - balls slow down after being moved backwards
 - If any gap has the same color on either side, the line is pulled together
 - After balls are moved back, movement starts slowly and then speeds up
 - Adding a ball always pushes the line forward
-
 
 Ball assets static vs animated?
 
@@ -106,7 +148,6 @@ Shot generation
 - is it easier to have the balls swap colors when they swap?
 	e.g. shot ball gets up next color, up next color becomes shot ball color
 
-
 Score stuff and extras
 - Combos push the line backwards
 - Powerups such as slow, explosion, reverse, etc.
@@ -114,7 +155,7 @@ Score stuff and extras
 
 
 
-# Investigatory Projects
+### Investigatory Projects
 
 ✅ Render a game window in 2D perspective. 1hr
 
@@ -190,14 +231,7 @@ Frog
 	shot ball
 	up next color
 
-
-
 Five maps
-
 colors: red blue green yellow (purple) (white)
-
 Add to list and pop from list
-
 If no ball behind, bring this ball up to speed and adjust others 
-
-Test Change
