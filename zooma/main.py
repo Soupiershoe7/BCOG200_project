@@ -37,6 +37,7 @@ class ZoomaGameState:
         self.did_zooma = False
         self.game_over = False
         self.level_complete = False
+        self.show_game_over = False
         self.did_reset_boost = False
         self.start_time = 0
         self.game_start_boost_mult = 10
@@ -203,6 +204,11 @@ class ZoomaGame:
 
     def reset_game(self, state: ZoomaGameState):
         self.end_level(state)
+        state.show_game_over = False
+        state.game_over = False
+        state.score = 0
+        state.current_level = 0
+
         self.state = self.load_level(state.current_level, state)
         self.start_level(self.state)
 
@@ -266,16 +272,17 @@ class ZoomaGame:
         self.task_check_colors(state)
 
     def task_check_win(self, state: ZoomaGameState):
-        if not state.did_zooma:
-            return
-
         ball_count = 0
         for entity in state.entity_list:
             if isinstance(entity, Chain):
                 ball_count += len(entity.data)
 
         if ball_count == 0:
-            self.end_level(state)
+            if state.game_over:
+                state.show_game_over = True
+            elif state.did_zooma:
+                self.end_level(state)
+
 
     def task_emit_chain(self, state: ZoomaGameState):
         self.try_to_emit_chain(state)
@@ -726,8 +733,11 @@ class ZoomaGame:
         self.draw_entities(state)
         self.draw_status_display(state)
 
-        if state.level_complete:
+        if state.show_game_over:
+            self.draw_game_over(state)
+        elif state.level_complete:
             self.draw_level_complete(state)
+        
 
         # Update the display
         pygame.display.flip()
@@ -771,8 +781,21 @@ class ZoomaGame:
             self.draw_text(self.screen, state.last_message, (center_x, 50), centered=True)
         self.draw_progress_bar(self.screen, state, (center_x + 100, 10))
 
+    def draw_game_over(self, state: ZoomaGameState):
+        if state.show_game_over:
+            dimensions = Vector2(700, 350)
+            center = Vector2(WIDTH / 2, HEIGHT / 2)
+            rect = pygame.Rect(center.x - dimensions.x / 2, center.y - dimensions.y / 2, dimensions.x, dimensions.y)
+            pygame.Surface.fill(self.screen, Color('#8e7c78'), rect)
+            
+            self.draw_text(self.screen, "Game Over", (center.x, center.y - 50), centered=True)
+            self.draw_text(self.screen, f"Final score: {state.score}", (center.x, center.y), centered=True)
+            self.draw_text(self.screen, "Press Escape to exit the game", (center.x, center.y + 50), centered=True)
+
     def draw_level_complete(self, state: ZoomaGameState):
-        if state.level_name == "Level 3-6":
+
+        
+        if state.current_level >= len(self.data["levels"]):
             dimensions = Vector2(700, 350)
             center = Vector2(WIDTH / 2, HEIGHT / 2)
             rect = pygame.Rect(center.x - dimensions.x / 2, center.y - dimensions.y / 2, dimensions.x, dimensions.y)
