@@ -790,7 +790,7 @@ class ZoomaGame:
             
             self.draw_text(self.screen, "Game Over", (center.x, center.y - 50), centered=True)
             self.draw_text(self.screen, f"Final score: {state.score}", (center.x, center.y), centered=True)
-            self.draw_text(self.screen, "Press Escape to exit the game", (center.x, center.y + 50), centered=True)
+            self.draw_text(self.screen, "Press Escape to exit or R to restart", (center.x, center.y + 50), centered=True)
 
     def draw_level_complete(self, state: ZoomaGameState):
 
@@ -803,7 +803,7 @@ class ZoomaGame:
             
             self.draw_text(self.screen, "You win!", (center.x, center.y - 50), centered=True)
             self.draw_text(self.screen, f"Final score: {state.score}", (center.x, center.y), centered=True)
-            self.draw_text(self.screen, "Press Escape to exit the game", (center.x, center.y + 50), centered=True)
+            self.draw_text(self.screen, "Press Escape to exit or R to restart", (center.x, center.y + 50), centered=True)
             return
         
         dimensions = Vector2(500, 250)

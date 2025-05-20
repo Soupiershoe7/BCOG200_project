@@ -40,7 +40,7 @@ zooma-editor
 
 For debugging purposes/ testing:
 - **N**: Advance to next level
-- **R**: Reset level
+- **R**: Reset Game to Start
 - **0, -, +**: Adjust chain speed
 
 # Game Narrative and intended functions
