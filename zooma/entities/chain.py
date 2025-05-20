@@ -188,6 +188,7 @@ class Chain(Entity):
         self.move_speed = -speed
         for record in self.data:
             record.target_id = max(0, record.target_id - 1)
+            record.ball.with_target_id(record.target_id)
 
     def is_reversed(self):
         return self.move_speed < 0
@@ -195,7 +196,6 @@ class Chain(Entity):
     def draw(self, screen):
         for record in self.data:
             record.ball.draw(screen)
-
 
     def _is_pushed_by_insertion_record(self, index: int) -> bool:
         for record in self.pending_insertions:
@@ -216,7 +216,11 @@ class Chain(Entity):
                 return
 
     def _forward_push(self, index: int):
-        for i in range(index, -1, -1):
+        if index < 0:
+            return
+        
+        for i in range(index):
+            # self._update_ball(i, force_to_end=True)
             self._update_ball(i)
 
     def update(self):
@@ -234,7 +238,7 @@ class Chain(Entity):
             for i in range(len(self.data) - 1, -1, -1):
                 self._update_ball(i)
 
-    def _update_ball(self, index, speed: float = None):
+    def _update_ball(self, index, speed: float = None, force_to_end: bool = False):
         collided = False
         # if given speed still exists and is small, return
         if speed and speed < 0.00001:
@@ -242,7 +246,7 @@ class Chain(Entity):
         
         record = self.data[index]
         ball = record.ball
-        is_reversing = self.move_speed < 0
+        is_reversing = self.move_speed < 0 and not force_to_end
         
         # Get this balls target
         target = self.path.points[record.target_id]
@@ -294,7 +298,7 @@ class Chain(Entity):
                 if prev_ball_insertion_record:
                     # TODO: forward push should only push as much as we have collision
                     movement_amount = 0
-                    self._forward_push(prev_ball_index)
+                    self._forward_push(index - 1) #moving towards death hole
                 #actual movement is handled in move section
             else:
                 movement_amount = min(movement_amount, distance_until_collision)
@@ -328,32 +332,36 @@ class Chain(Entity):
 
         return first_ball.position.distance_to(second_ball.position) - first_ball.radius - second_ball.radius
 
-    def _advanceTarget(self, index: int):
+    def _advanceTarget(self, index: int, force_to_end: bool = False):
         record = self.data[index]
+
+        is_reversing = self.move_speed < 0 and not force_to_end
         
         insertion_record = self._get_insertion_record(index)
         if insertion_record:
-            follower_index = index + 1 if self.move_speed >= 0 else index - 1
+            follower_index = index + 1 if not is_reversing else index - 1
             if self._get_collision_distance(index, follower_index) >= 0:
                 self._delete_insertion_record(index)
 
-        has_prev_ball = index > 0 if self.move_speed >= 0 else index < len(self.data) - 1
-        prev_ball_index = index - 1 if self.move_speed >= 0 else index + 1
+        has_prev_ball = index > 0 if not is_reversing else index < len(self.data) - 1
+        prev_ball_index = index - 1 if not is_reversing else index + 1
         
         previous_ball_target = None
         if has_prev_ball:
             previous_ball_target = self.data[prev_ball_index].target_id
 
-        if self.move_speed >= 0:
+        if not is_reversing:
             new_target_id = min(record.target_id + 1, len(self.path.points) - 1)
             if previous_ball_target is not None:
                 new_target_id = min(new_target_id, previous_ball_target)
             record.target_id = new_target_id
+            record.ball.with_target_id(new_target_id)
         else:
             new_target_id = max(record.target_id - 1, 0)
             if previous_ball_target is not None:
                 new_target_id = max(new_target_id, previous_ball_target)
             record.target_id = new_target_id
+            record.ball.with_target_id(new_target_id)
 
     def _get_distance_between_ball(self, first_id: int, second_id: int) -> int:
         first_record = self.data[first_id]

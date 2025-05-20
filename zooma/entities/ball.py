@@ -5,6 +5,7 @@ import pygame
 from pygame import Color, Vector2
 from zooma.entities.entity import Entity
 
+DEBUG = False
 
 class Ball(Entity):
     def __init__(self, position: Vector2, color):
@@ -14,16 +15,17 @@ class Ball(Entity):
         self.color = color
         # TODO: This implies new
         self.is_shot_ball = False
-        self.font = pygame.font.Font(None, 24)
+        self.font = pygame.font.Font(None, 18)
 
     def draw(self, screen):
         pygame.draw.circle(screen, self.color, self.position, self.radius)
-        label = self.get_label()
-        if label is not None:
-            self.draw_text(screen, label, self.position)
+        if DEBUG:
+            label = self.get_label()
+            if label is not None:
+                self.draw_text(screen, label, self.position)
 
     def draw_text(self, screen: pygame.Surface, text: str, pos: Vector2):
-        text_surface = self.font.render(text, True, Color('black'))
+        text_surface = self.font.render(text, True, Color('white'))
         text_rect = text_surface.get_rect(center=pos)
         screen.blit(text_surface, text_rect)
 
@@ -83,6 +85,10 @@ class ChainBall(Ball):
         self.chain_id = chain_id
         return self
 
+    def with_target_id(self, target_id):
+        self.target_id = target_id
+        return self
+
     def append(self, ball: "ChainBall"):
         assert ball is not None, "The fuck you doing man? no ballz"
 
@@ -101,6 +107,8 @@ class ChainBall(Ball):
         self.target = target
 
     def get_label(self):
+        if hasattr(self, 'target_id'):
+            return f"{self.chain_id}-{self.id} {self.target_id}"
         return f"{self.chain_id}-{self.id}"
 
 if __name__ == "__main__":

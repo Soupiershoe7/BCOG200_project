@@ -37,6 +37,7 @@ class ZoomaGameState:
         self.did_zooma = False
         self.game_over = False
         self.level_complete = False
+        self.did_reset_boost = False
         self.start_time = 0
         self.game_start_boost_mult = 10
         self.game_start_boost_time = 1500
@@ -112,6 +113,7 @@ class ZoomaGame:
             state.combo_mult = 1
             state.progress_percent = 0
             state.did_zooma = False
+            state.did_reset_boost = False
             state.last_message = ""
             state.level_complete = False
 
@@ -200,26 +202,9 @@ class ZoomaGame:
             self.end_level(state)
 
     def reset_game(self, state: ZoomaGameState):
-        to_remove = []
-        for entity in state.entity_list:
-            if isinstance(entity, Chain):
-                to_remove.append(entity)
-        
-        for entity in to_remove:
-            state.entity_list.remove(entity)
-
-        state.score = 0
-        state.progress_percent = 0
-        state.chain_count = 0
-        state.combo_mult = 1
-        state.did_zooma = False
-        state.game_over = False
-        state.level_colors.set_difficulty(state.difficulty)
-        state.forg.reset()
-
-        for entity in state.entity_list:
-            if isinstance(entity, Emitter):
-                entity.activate()
+        self.end_level(state)
+        self.state = self.load_level(state.current_level, state)
+        self.start_level(self.state)
 
     def process_inputs(self, state: ZoomaGameState):
         """ Process user inputs """
@@ -258,7 +243,7 @@ class ZoomaGame:
                 elif event.key == K_SPACE: 
                     self.swap_held_ball(state)
                 
-                # reset game
+                # reset level
                 elif event.key == K_r: 
                     self.reset_game(state)
 
@@ -314,32 +299,50 @@ class ZoomaGame:
                     continue
 
                 can_emit = True
+                last_chain = None
+                best_distance = float('inf')
+
                 for entity in state.entity_list:
                     # emitter blocked
-                    if isinstance(entity, Chain) and emitter.check_collision(entity):
-                        can_emit = False
-                        break
+                    if isinstance(entity, Chain):
+                        if entity.path != emitter.path:
+                            continue
+                        
+                        d = emitter.path.distance_between_point_and_position(
+                            0,
+                            entity.get_last_ball().position
+                        )
+
+                        if d < best_distance:
+                            best_distance = d
+                            last_chain = entity
+                            
+                        if emitter.check_collision(entity):
+                            can_emit = False
+                            break
                 
                 if can_emit:
                     new_ball = ChainBall(emitter.position, emitter.get_color())
                     chain = Chain(emitter.path, [new_ball])
                     chain.shut_the_fuck_up = True
-                    state.entity_list.append(chain)
+
+                    if (last_chain is not None and
+                        best_distance < last_chain.get_last_ball().radius * 3):
+                        last_chain.append_chain(chain)
+                    else:
+                        state.entity_list.append(chain)
 
     # I got help from a tutor for functionality for multiple pushers
     def task_motivate_chains(self, state: ZoomaGameState):
         path_distances = {}
         path_pushers = {}
 
+        should_boost = (pygame.time.get_ticks() - state.start_time) < state.game_start_boost_time
+
         for entity in state.entity_list:
             if isinstance(entity, Chain):
                 if state.game_over:
                     entity.move_speed = state.base_chain_speed * 10
-                # if current time is more than 3 seconds since start
-                # elif (pygame.time.get_ticks() - state.start_time) < state.game_start_boost_time:
-                #     entity.move_speed = state.base_chain_speed * state.game_start_boost_mult
-                # elif (pygame.time.get_ticks() - state.start_time) > state.game_start_boost_time:
-                #     entity.move_speed = state.base_chain_speed
                 else:
                     first_ball = entity.get_first_ball()
                     path = entity.path
@@ -349,9 +352,20 @@ class ZoomaGame:
                         path_distances[path] = d
                         path_pushers[path] = entity
         
+        if not should_boost and not state.did_reset_boost:
+            state.did_reset_boost = True
+            for entity in state.entity_list:
+                if isinstance(entity, Chain):
+                    entity.move_speed = min(entity.move_speed, state.base_chain_speed)
+
         if not state.game_over:
             for pusher in path_pushers.values():
-                pusher.move_speed = state.base_chain_speed
+                if should_boost:
+                    pusher.move_speed = state.base_chain_speed * state.game_start_boost_mult
+                else:
+                    pusher.move_speed = state.base_chain_speed
+            
+            self.scan_chain_matches(state)
 
     def task_check_colors(self, state: ZoomaGameState):
         if not state.did_zooma:
@@ -640,7 +654,7 @@ class ZoomaGame:
 
         score = match_count * 10 * combo_mult * chain_mult
         state.score += score
-        state.progress_percent += score / 300
+        state.progress_percent += score / 1500
 
         score_message = f"+{score}"
         if chain_mult > 1:
@@ -653,20 +667,32 @@ class ZoomaGame:
         
         
     def scan_chain_matches(self, state: ZoomaGameState):
-        chains = [entity for entity in state.entity_list if isinstance(entity, Chain)]
+        path_chains = {}
+        
+        for entity in state.entity_list:
+            if isinstance(entity, Chain):
+                path = entity.path
+                if path not in path_chains:
+                    path_chains[path] = []
+                path_chains[path].append(entity)
 
         def chain_sort_key(chain: Chain):
             path = chain.path
             return path.distance_between_point_and_position(-1, chain.get_first_ball().position)
 
-        chains.sort(key=chain_sort_key)
+        for path, chains in path_chains.items():
+            chains.sort(key=chain_sort_key)
 
-        for i in range(len(chains) - 1):
-            chain1 = chains[i]
-            chain2 = chains[i + 1]
-            
-            if self._do_chains_match(state, chain1, chain2):
-                chain1.reverse(state.base_chain_speed * 3)
+            for i in range(len(chains) - 1):
+                chain1 = chains[i]
+                chain2 = chains[i + 1]
+                
+                if self._do_chains_match(state, chain1, chain2):
+                    if not chain1.is_reversed():
+                        chain1.reverse(state.base_chain_speed * 3)
+                else:
+                    if chain1.is_reversed():
+                        chain1.move_speed = 0
     
     def _do_chains_match(self, state: ZoomaGameState, chain1: Chain, chain2: Chain):
         path1 = chain1.path
@@ -708,7 +734,11 @@ class ZoomaGame:
         for entity in state.entity_list:
             entity.draw(self.screen)
 
-    def draw_text(self, screen: pygame.Surface, text: str, pos: tuple[int, int], color: Color = Color('white'), centered: bool = False, centered_x: bool = False):
+    def draw_text(self, screen: pygame.Surface, 
+                  text: str, pos: tuple[int, int], 
+                  color: Color = Color('white'), 
+                  centered: bool = False, 
+                  centered_x: bool = False):
         text_surface = self.font.render(text, True, color)
         if centered:
             pos = (pos[0] - text_surface.get_width() / 2, pos[1] - text_surface.get_height() / 2)
