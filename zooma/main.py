@@ -402,6 +402,9 @@ class ZoomaGame:
             state.entity_list.append(new_chain)
             print("special split move speed lost motivations", first_chain.get_first_ball().id)
             first_chain.move_speed = 0
+
+        if len(first_chain) == 0:
+            state.entity_list.remove(first_chain)
             
 
 

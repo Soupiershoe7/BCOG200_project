@@ -17,6 +17,10 @@ class DeathHole(Entity):
 
 
     def check_collision(self, other: Chain):
+        if len(other) == 0:
+            print("!!!! Warning found empty chain !!!!")
+            return False
+            
         first_ball = other.get_first_ball()
         distance = self.position.distance_to(first_ball.position)
         return distance < self.death_radius

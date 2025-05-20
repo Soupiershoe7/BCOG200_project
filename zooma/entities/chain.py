@@ -56,6 +56,9 @@ class Chain(Entity):
                 record.ball.with_chain_id(self.id)
             self.data.append(record)
 
+        if len(self.data) == 0:
+            print("!!!! Warning made empty chain !!!!")
+
         self.pending_insertions: list[InsertionRecord] = []
 
     def __len__(self):
@@ -108,7 +111,12 @@ class Chain(Entity):
         
         print("Splitting chain at index", index)
         print("Chain Before: ", [record.ball.id for record in self.data])
-        new_chain = Chain(self.path, self.data[index:])
+        new_records = self.data[index:]
+
+        if len(new_records) == 0:
+            return None
+
+        new_chain = Chain(self.path, new_records)
         self.data = self.data[:index]
 
         return new_chain
